@@ -1,0 +1,412 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ─────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+\usepackage{parskip}
+
+% ── Couleurs ──────────────────────────────────────────────────────────────────
+\definecolor{meteoBlue}{HTML}{1D3557}
+\definecolor{meteoRed}{HTML}{E63946}
+\definecolor{meteoGray}{HTML}{F1FAEE}
+\definecolor{meteoCyan}{HTML}{457B9D}
+
+% ── Mise en page ─────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{meteoBlue}\textbf{Météorage} — Prédiction de fin d'orage}
+\fancyhead[R]{\small\color{meteoBlue}Analyse exploratoire des données}
+\fancyfoot[C]{\small\color{gray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ── Titres ────────────────────────────────────────────────────────────────────
+\titleformat{\section}[block]
+  {\Large\bfseries\color{meteoBlue}}
+  {\thesection}{1em}{}[\vspace{-0.3em}\rule{\linewidth}{0.4pt}]
+
+\titleformat{\subsection}[block]
+  {\large\bfseries\color{meteoCyan}}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}[block]
+  {\normalsize\bfseries\color{meteoBlue}}
+  {\thesubsubsection}{1em}{}
+
+% ── Légendes ──────────────────────────────────────────────────────────────────
+\captionsetup{font=small, labelfont=bf, margin=10pt}
+
+% ── Boîte de synthèse ─────────────────────────────────────────────────────────
+\newenvironment{keybox}[1]
+  {\begin{tcolorbox}[colback=meteoGray,colframe=meteoBlue,title={\textbf{#1}},
+    fonttitle=\small, boxrule=0.6pt, arc=3pt]}
+  {\end{tcolorbox}}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Page de titre ─────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \pagecolor{meteoBlue}
+  \color{white}
+  \vspace*{2cm}
+  \begin{center}
+    {\Huge\bfseries Prédiction de fin d'orage\\[0.4em]}
+    {\large\bfseries Rapport d'Analyse Exploratoire des Données}\\[2em]
+    \rule{0.5\linewidth}{0.8pt}\\[1.5em]
+    {\large Réponse à l'appel d'offre \textbf{Météorage}}\\[0.5em]
+    {\normalsize Analyse de la dynamique spatio-temporelle des éclairs\\
+    autour de 5 aéroports européens}\\[3em]
+    {\normalsize Mars 2026}
+  \end{center}
+  \vfill
+  \begin{center}
+    \small\textit{Données : segment\_alerts\_all\_airports\_train.csv}\\
+    \small\textit{507\,071 éclairs $\cdot$ 5 aéroports $\cdot$ 769 sessions d'alerte}
+  \end{center}
+\end{titlepage}
+\nopagecolor
+
+% ── Table des matières ────────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Introduction et contexte}
+% =============================================================================
+
+Le problème posé par Météorage est celui de l'\textbf{estimation probabiliste de la fin d'un orage}. 
+Aujourd'hui, les alertes restent actives une durée fixe (30 à 60 minutes) après le dernier éclair 
+cloud-to-ground (\textit{CG}) dans la zone de surveillance. Pour des secteurs critiques comme les aéroports, 
+cette approche conservatrice engendre des pertes d'exploitation significatives.
+
+L'objectif est de développer un modèle capable d'exploiter la \textbf{dynamique spatio-temporelle} 
+des éclairs pour estimer, en temps réel, la probabilité que l'orage soit terminé.
+
+\subsection{Description du jeu de données}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{>{\bfseries}lXl}
+\toprule
+Variable & Description & Type \\
+\midrule
+\texttt{lightning\_id} & Identifiant unique global de l'éclair & int \\
+\texttt{lightning\_airport\_id} & Identifiant éclair dans le contexte aéroport & int \\
+\texttt{date} & Timestamp UTC de l'éclair & datetime \\
+\texttt{lon}, \texttt{lat} & Coordonnées géographiques de l'éclair & float \\
+\texttt{amplitude} & Courant de foudre en kA (signe = polarité) & float \\
+\texttt{maxis} & Amplitude normalisée / indicateur d'intensité & float \\
+\texttt{icloud} & \texttt{True} = intra-cloud, \texttt{False} = cloud-to-ground & bool \\
+\texttt{dist} & Distance à l'aéroport (km, rayon max 50 km) & float \\
+\texttt{azimuth} & Angle par rapport au Nord (\degre) & float \\
+\texttt{airport} & Nom de l'aéroport (5 valeurs) & str \\
+\texttt{airport\_alert\_id} & Identifiant de la session d'alerte (NaN si hors alerte) & float \\
+\texttt{is\_last\_lightning\_cloud\_ground} & \textbf{Cible} : dernier éclair CG de la session ? & bool/NaN \\
+\bottomrule
+\end{tabularx}
+\caption{Description des variables du jeu de données}
+\end{table}
+
+\begin{keybox}{Statistiques globales}
+\begin{itemize}[noitemsep]
+  \item \textbf{507\,071} éclairs au total
+  \item \textbf{5 aéroports} : Ajaccio, Bastia, Biarritz, Nantes, Pise
+  \item \textbf{769 sessions d'alerte} distinctes (\texttt{airport\_alert\_id} non nul)
+  \item \textbf{56\,599 éclairs en alerte} ($\approx 11\%$ du total)
+  \item La variable cible est disponible uniquement pour les éclairs CG en session d'alerte
+  \item Période couverte : 2016 (au moins) avec pics estivaux marqués
+\end{itemize}
+\end{keybox}
+
+% =============================================================================
+\section{Répartition par aéroport}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig1_airport_counts.pdf}
+  \caption{Distribution des éclairs entre les 5 aéroports. Pise concentre la majorité de l'activité 
+  orageuse.}
+\end{figure}
+
+Les 5 aéroports présentent des niveaux d'activité orageuse très différents. Pise (Toscane, Italie) 
+domine avec plus de 30\% des éclairs totaux, en raison de sa position géographique favorable au 
+développement convectif (convergence mer Ligure / relief apennin). Bastia et Biarritz suivent avec 
+des niveaux d'activité similaires, puis Ajaccio, et enfin Nantes, qui connaît l'activité la plus faible.
+On remarque que Bastia et Ajaccio, les deux aéroports corses, ont des niveaux d'activité orageuse 
+différentes (presque 2 fois plus d'éclairs à Bastia qu'à Ajaccio), bien qu'on verra plus tard que le
+profil temporel est très similaire. 
+
+% =============================================================================
+\section{Analyse temporelle}
+% =============================================================================
+
+\subsection{Distribution mensuelle et horaire}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig2_temporal.pdf}
+  \caption{Distribution temporelle des éclairs : saisonnalité marquée avec un pic en été 
+  (juin-septembre) et un cycle diurne prononcé avec maximum en fin d'après-midi.}
+\end{figure}
+
+Deux patterns temporels fondamentaux se dégagent :
+
+\begin{itemize}
+  \item \textbf{Saisonnalité estivale} : la convection thermique atteint son maximum en été, 
+  avec un pic en juillet-août. La période novembre-mars est quasi inerte.
+  \item \textbf{Cycle diurne convectif} : le maximum d'éclairs se situe dans l'après-midi, 
+  entre 12h et 14h30 UTC, correspondant au pic de la couche limite convective après son réchauffement.
+\end{itemize}
+
+\subsection{Heatmap mois $\times$ heure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig3_heatmap_month_hour.pdf}
+  \caption{Densité combinée mois * heure. Le quadrant "été / après-midi" concentre l'essentiel 
+  de l'activité. Les orages nocturnes (00h-06h UTC) sont plus fréquents en juillet-août, 
+  associés aux systèmes convectifs méso-échelle.}
+\end{figure}
+
+\subsection{Activité par aéroport et par mois}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig4_heatmap_airport_month.pdf}
+  \caption{Répartition mensuelle de l'activité orageuse par aéroport. On observe que Biarritz 
+  présente un pic précoce et très étalé s'amorçant dès mai-juin jusqu'en août. Nantes a également 
+  une activité concentrée sur le début d'été (mai--juillet). Pise connaît un pic tardif en août--septembre, 
+  tandis qu'Ajaccio et Bastia, avec des profils quasi-identiques, voient l'essentiel de leur 
+  activité orageuse repoussé de août à octobre, période de fort flux de chaleur de la mer Méditerranée.}
+\end{figure}
+
+% =============================================================================
+\section{Caractéristiques physiques des éclairs}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig5_physics.pdf}
+  \caption{Distributions des variables physiques. \textbf{Amplitude} : distribution bimodale 
+  asymétrique, la majorité des éclairs CG sont négatifs. \textbf{Maxis} : variable interne concentrée entre 0 et 2 avec une queue lourde. 
+  \textbf{Distance} : distribution croissante linéairement — ce phénomène est un artefact géométrique attendu car 
+  la surface de l'anneau de distance $r$ est proportionnelle à $2\pi r$. Pour une densité spatiale d'éclairs parfaitement 
+  homogène, le nombre d'éclairs augmente linéairement avec la distance. 
+  \textbf{Ratio IC} : varie de 66\% (Ajaccio) à plus de 80\% (Biarritz).}
+\end{figure}
+
+\subsection{Définition de Maxis et Ratio IC}
+
+\textbf{Maxis} est un indicateur de gradient d'intensité couramment utilisé par Météorage. Il s'agit 
+d'une valeur normalisée (souvent corrélée à l'amplitude maximale ou à la raideur du front de courant 
+de l'éclair) qui aide à distinguer différents types ou puissances de décharges.
+
+Le rapport éclairs intra-cloud (\textbf{IC}) sur le total d'éclairs est un indicateur du stade de développement 
+d'un orage. Un ratio élevé en début de session indique un orage en phase de maturation ; 
+un ratio croissant en fin de session peut signaler la dissipation.
+
+\subsection{Rose des azimuts}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig6_azimuth_rose.pdf}
+  \caption{Distribution angulaire (azimut) des éclairs. Nantes affiche un fort flux en provenance du sud-ouest. 
+  Biarritz se distingue par un flux d'est dominant (descente des Pyrénées). Pour la Corse, Bastia 
+  présente des apports sud-ouest et sud-est, tandis qu'Ajaccio est majoritairement à l'est. Pise 
+  connaît une répartition plus symétrique avec deux axes dominants est/ouest.}
+\end{figure}
+
+% =============================================================================
+\section{Analyse géographique}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig7_geo_scatter.pdf}
+  \caption{Densité spatiale des éclairs dans un rayon d'environ 35 km autour de chaque aéroport. 
+  L'étoile rouge indique la position de l'aéroport. On note des clusters intenses liés au relief (Corse, Apennins).}
+\end{figure}
+
+Les cartes révèlent des structures spatiales propres à chaque site : 
+Ajaccio et Bastia montrent des éclairs concentrés sur les reliefs intérieurs corses ; 
+Pise présente une dispersion vers les Apennins à l'est ; Biarritz et Nantes ont 
+des distributions plus homogènes, typiques des environnements de plaine atlantique.
+
+% =============================================================================
+\newpage
+\section{Analyse des sessions d'alerte}
+% =============================================================================
+
+\subsection{Durée et intensité des sessions}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig8_sessions.pdf}
+  \caption{Caractéristiques des 769 sessions d'alerte. Le nombre d'éclairs par session suit 
+  une forte loi asymétrique, avec de très nombreuses sessions mineures, mais aussi des sessions majeures 
+  atteignant un millier d'éclairs.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig9_sessions_by_airport.pdf}
+  \caption{Comparaison des sessions par aéroport. Pise présente les sessions les plus 
+  longues et les plus intenses (médiane élevée en nombre d'éclairs). Biarritz et Nantes 
+  ont des sessions plus courtes mais potentiellement plus imprévisibles.}
+\end{figure}
+
+\subsection{Spécificités par aéroport}
+
+\begin{keybox}{Profils orageaux par aéroport}
+\begin{itemize}[noitemsep]
+  \item \textbf{Pise} : L'aéroport le plus actif en volume absolu, avec un pic de fin d'été.
+  \item \textbf{Ajaccio \& Bastia} : Saisonnalité quasi-identique (août à octobre).
+  \item \textbf{Nantes} : Orages plus rares mais concentrés en début d'été (mai-juillet), marqués 
+  par un flux SW puissant.
+  \item \textbf{Biarritz} : Fort ratio de décharges IC et vents orageux d'est (effet pyrénéen 
+  et transition océan/continent).
+\end{itemize}
+\end{keybox}
+
+% =============================================================================
+\section{Analyse de la variable cible}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig10_target_analysis.pdf}
+  \caption{\textbf{Gauche} : la cible est fortement déséquilibrée — le dernier éclair CG 
+  ne représente qu'une fraction des éclairs en session (par définition, un par session). 
+  \textbf{Centre} : distribution du temps restant jusqu'à la fin de session — 
+  la règle fixe d'attente de 30 minutes après un éclair ne capture que 25.0\% du temps restant total de la tempête ; une prédiction dynamique 
+  peut réduire significativement ce décalage. 
+  \textbf{Droite} : intervalles inter-éclairs CG, avec une queue lourde significative.}
+\end{figure}
+
+\subsection{Formulation du problème de modélisation}
+
+Deux formulations complémentaires sont envisagées pour la Phase 2 :
+
+\begin{enumerate}
+  \item \textbf{Classification binaire} : pour chaque éclair CG en session, 
+  prédire $P(\text{dernier éclair CG}) \in [0,1]$. 
+  Le modèle produit une probabilité de fin d'orage en temps réel.
+  
+  \item \textbf{Régression de survie} : modéliser le temps restant $T$ jusqu'au 
+  dernier éclair CG comme une variable de survie censurée, avec :
+  \[
+    P(T > t \mid \mathcal{F}_t) = S(t \mid \mathcal{F}_t)
+  \]
+  où $\mathcal{F}_t$ est l'historique des éclairs jusqu'au temps $t$.
+\end{enumerate}
+
+\subsection{Exemple de session d'alerte}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig11_session_example.pdf}
+  \caption{Exemple d'une session d'alerte complète. Le panneau supérieur montre 
+  la distance à l'aéroport des éclairs IC (violet) et CG (rouge) au cours du temps. 
+  Le panneau inférieur montre l'évolution de l'amplitude des éclairs CG. 
+  La ligne pointillée noire indique le moment du dernier éclair CG — 
+  c'est ce que le modèle doit apprendre à anticiper.}
+\end{figure}
+
+% =============================================================================
+\section{Corrélations et structure des données}
+% =============================================================================
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/fig12_correlation.pdf}
+  \caption{Matrice de corrélation de Pearson des variables physiques. Contrairement à l'attente initiale, 
+  l'amplitude et \texttt{maxis} présentent une corrélation quasi-inexistante ($0.08$). Cela 
+  signifie qu'elles mesurent des caractéristiques très distinctes de la décharge (puissance vs profil). 
+  La distance et l'azimuth sont également quasi-indépendants des variables physiques.}
+\end{figure}
+
+% =============================================================================
+\section{Conclusions et orientations pour la modélisation}
+% =============================================================================
+
+\begin{keybox}{Points clés de l'analyse}
+\begin{itemize}[noitemsep]
+  \item \textbf{Forte saisonnalité} : les modèles devront être entraînés/évalués 
+  en respectant la structure temporelle (pas de leakage temporel dans la validation).
+  \item \textbf{Hétérogénéité inter-aéroports} : un encodage de l'aéroport ou des 
+  modèles spécifiques par site seront nécessaires.
+  \item \textbf{Déséquilibre de classes} : la cible est déséquilibrée par construction 
+  (1 dernier éclair par session). Des techniques de pondération ou d'échantillonnage 
+  seront requises.
+  \item \textbf{Structure séquentielle} : l'ordre temporel des éclairs dans une session 
+  est l'information la plus riche. Les modèles devront intégrer cette dimension 
+  (features de fenêtre glissante, processus ponctuels, RNN/Transformer...).
+  \item \textbf{Signal de dissipation} : le ratio IC croissant en fin de session 
+  et l'augmentation des intervalles inter-éclairs CG sont des signaux prometteurs.
+\end{itemize}
+\end{keybox}
+
+\subsection{Features candidates pour la modélisation}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{>{\ttfamily\small}lX}
+\toprule
+\textbf{Feature} & \textbf{Description} \\
+\midrule
+time\_since\_alert\_start & Temps écoulé depuis le début de la session (min) \\
+time\_since\_last\_cg & Intervalle depuis le dernier éclair CG (min) \\
+n\_cg\_last\_10min & Nombre d'éclairs CG dans les 10 dernières minutes \\
+n\_ic\_last\_10min & Nombre d'éclairs IC dans les 10 dernières minutes \\
+icloud\_ratio\_recent & Ratio IC/(IC+CG) sur fenêtre glissante \\
+mean\_dist\_recent & Distance moyenne des éclairs récents \\
+dist\_centroid\_drift & Déplacement du centroïde des éclairs récents \\
+amplitude\_trend & Tendance (pente) de l'amplitude sur les derniers CG \\
+maxis\_trend & Tendance de maxis \\
+airport & Encodage de l'aéroport \\
+hour\_utc & Heure UTC (signal diurne) \\
+month & Mois (signal saisonnier) \\
+\bottomrule
+\end{tabularx}
+\caption{Features candidates pour les modèles de Phase 2}
+\end{table}
+
+% =============================================================================
+\appendix
+\section{Environnement technique}
+% =============================================================================
+
+\begin{itemize}
+  \item Langage : Python 3.14, environnement \texttt{pew orage}
+  \item Librairies : \texttt{pandas 3.0}, \texttt{numpy}, \texttt{matplotlib}, 
+    \texttt{seaborn}, \texttt{scikit-learn}, \texttt{scipy}
+  \item Compilation : MiKTeX 26.2 (pdfLaTeX)
+\end{itemize}
+
+\end{document}

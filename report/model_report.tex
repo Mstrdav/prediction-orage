@@ -1,0 +1,386 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ─────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+
+% ── Couleurs ──────────────────────────────────────────────────────────────────
+\definecolor{meteoBlue}{HTML}{1D3557}
+\definecolor{meteoRed}{HTML}{E63946}
+\definecolor{meteoGray}{HTML}{F1FAEE}
+\definecolor{meteoCyan}{HTML}{457B9D}
+
+% ── Mise en page ─────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{meteoBlue}\textbf{Météorage} — Phase 2 : Évaluation des modèles}
+\fancyhead[R]{\small\color{meteoBlue}Fiches modèles}
+\fancyfoot[C]{\small\color{gray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Titres ────────────────────────────────────────────────────────────────────
+\titleformat{\section}[block]
+  {\Large\bfseries\color{meteoBlue}}
+  {\thesection}{1em}{}[\vspace{-0.3em}\rule{\linewidth}{0.4pt}]
+\titleformat{\subsection}[block]
+  {\large\bfseries\color{meteoCyan}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}[block]
+  {\normalsize\bfseries\color{meteoBlue}}
+  {\thesubsubsection}{1em}{}
+
+\captionsetup{font=small, labelfont=bf, margin=10pt}
+
+\newenvironment{keybox}[1]
+  {\begin{tcolorbox}[colback=meteoGray,colframe=meteoBlue,title={\textbf{#1}},
+    fonttitle=\small, boxrule=0.6pt, arc=3pt]}
+  {\end{tcolorbox}}
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Page de titre ─────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \pagecolor{meteoBlue}
+  \color{white}
+  \vspace*{2cm}
+  \begin{center}
+    {\Huge\bfseries Prédiction de fin d'orage\\[0.4em]}
+    {\large\bfseries Phase 2 — Fiches d'évaluation des modèles}\\[2em]
+    \rule{0.5\linewidth}{0.8pt}\\[1.5em]
+    {\large Réponse à l'appel d'offre \textbf{Météorage}}\\[0.5em]
+    {\normalsize Comparaison de 5 approches de modélisation\\
+    pour l'estimation du temps résiduel d'orage}\\[3em]
+    {\normalsize Mars 2026}
+  \end{center}
+  \vfill
+  \begin{center}
+    \small\textit{5 modèles $\cdot$ 56\,599 éclairs $\cdot$ 2\,627 sessions d'alerte}
+  \end{center}
+\end{titlepage}
+\nopagecolor
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Vue d'ensemble et comparaison}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/comparison_global.pdf}
+  \caption{Comparaison globale des 5 modèles : erreur absolue moyenne (gauche) et biais de prédiction (droite).
+  Le Neural Hawkes domine nettement avec une MAE de 22 min et un biais quasi nul.}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l *{5}{>{\centering\arraybackslash}X}}
+\toprule
+\textbf{Modèle} & \textbf{MAE} & \textbf{RMSE} & \textbf{Médiane} & \textbf{P90} & \textbf{Biais} \\
+\midrule
+Baseline (30 min)      & 60.26 & 94.05  & 33.32 & 132.48 & $-$52.32 \\
+XGBoost AFT            & 57.28 & 90.69  & 33.18 & 149.82 & $-$26.74 \\
+Hawkes Classique       & 83.99 & 124.37 & 56.88 & 178.96 & $-$83.82 \\
+\textbf{Neural Hawkes (GRU)} & \textbf{22.11} & \textbf{32.50} & \textbf{18.00} & \textbf{40.12} & \textbf{$-$1.61} \\
+BNN MC Dropout         & 68.20 & 102.98 & 34.31 & 164.40 & $+$1.42 \\
+\bottomrule
+\end{tabularx}
+\caption{Métriques comparatives sur le jeu de validation (14\,770 éclairs, 526 sessions).
+Toutes les valeurs sont en minutes.}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/error_distributions.pdf}
+  \caption{Distribution des erreurs absolues pour les 4 modèles principaux. Le Neural Hawkes (GRU)
+  présente une distribution nettement plus resserrée vers zéro que les trois autres.}
+\end{figure}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Modèle 1 — Baseline (règle fixe 30 minutes)}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Fonctionnement}
+La règle métier actuelle consiste à maintenir l'alerte pendant une durée fixe de 30 minutes 
+après la détection du dernier éclair cloud-to-ground (CG). Le ``temps restant'' prédit est 
+donc constant : $\hat{T} = 30$ min, indépendamment du contexte.
+
+\subsection{Résultats}
+\begin{keybox}{Métriques Baseline}
+\begin{itemize}[noitemsep]
+  \item MAE = 60.26 min — erreur moyenne élevée
+  \item Biais = $-$52.32 min — sous-estimation chronique du temps restant
+  \item Médiane = 33.32 min — la moitié des prédictions sont erronées de plus de 33 min
+\end{itemize}
+\end{keybox}
+
+Le biais fortement négatif ($-52$ min) signifie que la règle sous-estime systématiquement 
+le temps restant. Pour les sessions longues (plusieurs heures), prédire 30 min est 
+catastrophiquement optimiste. À l'inverse, pour les sessions très courtes, la règle 
+surestime et maintient l'alerte inutilement.
+
+\subsection{Pistes d'amélioration}
+Aucune --- c'est la référence. Son rôle est de quantifier le gain apporté par les modèles.
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Modèle 2 — XGBoost Survival (AFT)}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Fonctionnement}
+XGBoost est un algorithme d'ensemble par gradient boosting sur des arbres de décision.
+La variante \texttt{survival:aft} (\textit{Accelerated Failure Time}) modélise directement 
+$\ln(T)$ comme une variable de régression, où $T$ est le temps avant la fin de l'orage.
+
+\textbf{Features utilisées} (20 au total) :
+\begin{itemize}[noitemsep]
+  \item Temporelles : temps depuis le début, temps depuis le dernier CG
+  \item Fenêtres glissantes (15/30 min) : comptage d'éclairs, ratio IC/CG
+  \item Spatiales : distance moyenne, tendance de distance (approche/recul)
+  \item Physiques : amplitude, maxis
+  \item Cycliques : encodage sin/cos de l'heure et du mois
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/xgboost_importance.pdf}
+  \caption{Importance des features (gain) pour XGBoost AFT. Le nombre d'éclairs dans les 15 dernières 
+  minutes (\texttt{n\_lightnings\_15m}) domine très largement, indiquant que la densité temporelle 
+  récente est le signal le plus informatif.}
+\end{figure}
+
+\subsection{Résultats}
+\begin{keybox}{Métriques XGBoost AFT}
+\begin{itemize}[noitemsep]
+  \item MAE = 57.28 min — légère amélioration vs baseline
+  \item Biais = $-$26.74 min — réduit de moitié vs baseline
+  \item La feature \texttt{n\_lightnings\_15m} domine (gain = 915)
+  \item Early stopping à 108 boosting rounds (sur 500 max)
+\end{itemize}
+\end{keybox}
+
+\subsection{Analyse}
+L'amélioration modeste s'explique par le fait que XGBoost traite chaque éclair 
+\textbf{indépendamment}. Il ne capture pas la dynamique séquentielle : l'ordre 
+et l'espacement des éclairs ne sont exploités qu'indirectement via les features 
+de fenêtre glissante.
+
+\subsection{Pistes d'amélioration}
+\begin{itemize}[noitemsep]
+  \item Ajouter des features séquentielles plus riches (tendances sur 5/10/20 min)
+  \item Encoder la géographie (lat/lon relative, azimuth récent)
+  \item Tester \texttt{survival:cox} (risques proportionnels) comme alternative
+  \item Utiliser un split temporel strict (par date) plutôt que par session
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Modèle 3 — Processus de Hawkes (Classique)}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Fonctionnement}
+Le processus de Hawkes est un processus ponctuel \textbf{autoexcitant} : 
+chaque événement (éclair) augmente momentanément la probabilité d'observer un 
+prochain événement. L'intensité conditionnelle s'écrit :
+\[
+  \lambda(t) = \mu + \sum_{t_i < t} \alpha \cdot \beta \cdot e^{-\beta(t - t_i)}
+\]
+\begin{itemize}[noitemsep]
+  \item $\mu$ = taux de fond (intensité de base)
+  \item $\alpha$ = magnitude de l'excitation
+  \item $\beta$ = taux de décroissance de l'excitation
+\end{itemize}
+
+La fin de l'orage est prédite quand $\lambda(t)$ tombe en dessous d'un seuil fixé.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/hawkes_intensity.pdf}
+  \caption{Exemple d'intensité conditionnelle du processus de Hawkes. Chaque éclair CG 
+  (barres bleues) provoque un pic d'excitation qui décroît exponentiellement. 
+  Quand l'intensité passe sous le seuil rouge, l'alerte est levée.}
+\end{figure}
+
+\subsection{Résultats}
+\begin{keybox}{Paramètres et Métriques Hawkes Classique}
+\begin{itemize}[noitemsep]
+  \item Paramètres ajustés : $\mu = 0.204$, $\alpha = 0.680$, $\beta = 0.680$
+  \item MAE = 83.99 min — le plus mauvais modèle, y compris derrière la baseline
+  \item Biais = $-$83.82 min — sous-estime drastiquement le temps restant (coupure prématurée)
+  \item Le \textit{branching ratio} $\alpha = 0.68 < 1$ confirme la stationnarité du processus
+  (chaque événement engendre en moyenne 0.68 descendant, soit un processus sous-critique)
+\end{itemize}
+\end{keybox}
+
+\subsection{Analyse}
+La performance décevante, marquée par une sous-estimation systématique ($-83$ min), 
+s'explique par la \textbf{simplicité du noyau exponentiel}. L'excitation retombe très vite 
+sous le seuil de tolérance (ici réglé à $\mu + \varepsilon$), menant le modèle à déclarer la 
+fin de l'orage bien trop tôt entre deux rafales lointaines. De plus, le modèle univarié 
+ignore l'amplitude et la géométrie de la convection, ne lui laissant aucune indication 
+si le front approche ou s'éloigne.
+
+\subsection{Pistes d'amélioration}
+\begin{itemize}[noitemsep]
+  \item Noyau multivarié : distinguer les éclairs IC et CG
+  \item Noyau somme d'exponentielles pour capturer plusieurs échelles temporelles
+  \item Marques spatio-temporelles : pondérer l'excitation par la distance et l'amplitude
+  \item Seuil adaptatif par aéroport
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Modèle 4 — Neural Hawkes Process (GRU)}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Fonctionnement}
+Le Neural Hawkes Process remplace le noyau exponentiel paramétrique par un 
+\textbf{réseau de neurones récurrent} (GRU). L'idée :
+\begin{enumerate}[noitemsep]
+  \item Chaque éclair est représenté par un vecteur de features (icloud, amplitude, distance, maxis).
+  \item Un GRU accumule l'historique des événements dans un état caché $h_t$.
+  \item L'intensité est calculée par : $\lambda(t) = \text{softplus}(W_h \cdot h_{t_{\text{last}}} + w_\Delta \cdot \Delta t + b)$
+\end{enumerate}
+
+Contrairement au Hawkes classique, ce modèle :
+\begin{itemize}[noitemsep]
+  \item Apprend des \textbf{interactions non-linéaires} entre les features
+  \item Capture des \textbf{dépendances à long terme} dans la séquence
+  \item S'adapte aux \textbf{caractéristiques physiques} de chaque éclair
+\end{itemize}
+
+\subsection{Résultats}
+\begin{keybox}{Métriques Neural Hawkes (GRU) — \textcolor{meteoRed}{Meilleur modèle}}
+\begin{itemize}[noitemsep]
+  \item \textbf{MAE = 22.11 min} — 3$\times$ meilleur que la baseline
+  \item \textbf{RMSE = 32.50 min} — erreurs extrêmes fortement réduites
+  \item \textbf{Médiane = 18.00 min} — la moitié des prédictions à moins de 18 min d'erreur
+  \item \textbf{Biais = $-$1.61 min} — prédictions quasi non biaisées
+  \item \textbf{P90 = 40.12 min} — 90\% des erreurs sous 40 min
+\end{itemize}
+\end{keybox}
+
+\subsection{Analyse}
+Ce modèle combine le meilleur des deux mondes :
+\begin{itemize}
+  \item La \textbf{formulation en processus ponctuel} du Hawkes, naturelle pour un flux d'éclairs
+  \item La \textbf{puissance d'apprentissage} d'un réseau récurrent (GRU)
+\end{itemize}
+Il chute nettement les erreurs pour les sessions longues (où les modèles à features fixes échouent)
+car il peut ``mémoriser'' la dynamique entière de la séquence.
+
+\subsection{Pistes d'amélioration}
+\begin{itemize}[noitemsep]
+  \item Remplacer le GRU par un \textbf{Transformer} pour capturer les dépendances globales
+  \item Ajouter des features spatiales (azimuth, centroïde mobile)
+  \item Entraîner un modèle par aéroport pour capturer les spécificités locales
+  \item Intégrer un mécanisme d'attention temporelle (Temporal Attention)
+  \item Augmenter la taille du dataset avec des données synthétiques
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Modèle 5 — Bayesian Neural Network (MC Dropout)}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Fonctionnement}
+Le BNN utilise l'approximation \textbf{Monte Carlo Dropout} : un MLP classique 
+(128-64-32 neurones) dont les couches Dropout restent actives pendant l'inférence.
+En effectuant $N = 100$ passages forward, on obtient une \textbf{distribution de prédictions} :
+\begin{itemize}[noitemsep]
+  \item La \textbf{moyenne} des $N$ passages donne la prédiction $\hat{T}$
+  \item L'\textbf{écart-type} donne l'incertitude $\sigma$
+\end{itemize}
+
+L'intérêt opérationnel est majeur : un contrôleur aérien peut voir non seulement 
+``l'orage finira dans 45 min'' mais aussi ``$\pm$ 20 min d'incertitude''.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/bnn_uncertainty.pdf}
+  \caption{\textbf{Gauche} : incertitude prédite vs erreur réelle. Idéalement, les points 
+  devraient suivre la diagonale. \textbf{Droite} : distribution de l'incertitude prédite, 
+  centrée autour de 20 minutes.}
+\end{figure}
+
+\subsection{Résultats}
+\begin{keybox}{Métriques BNN MC Dropout}
+\begin{itemize}[noitemsep]
+  \item MAE = 68.20 min — performance proche de la baseline en termes d'erreur
+  \item Biais = $+$1.42 min — quasi nul (prédictions non biaisées)
+  \item Incertitude moyenne = 20.98 min
+  \item Calibration : 25.1\% dans 1$\sigma$ (idéal 68.3\%) — sous-calibré
+\end{itemize}
+\end{keybox}
+
+\subsection{Analyse}
+Le BNN avec MC Dropout donne des prédictions \textbf{non biaisées} mais avec une erreur 
+élevée. La calibration est insuffisante (25\% dans 1$\sigma$ au lieu de 68\%), 
+ce qui signifie que le modèle \textbf{sous-estime son incertitude}. 
+Cela vient du fait que le MC Dropout est une approximation grossière de l'inférence 
+bayésienne véritable, et que le réseau est trop petit et ne traite pas la séquence.
+
+\subsection{Pistes d'amélioration}
+\begin{itemize}[noitemsep]
+  \item Utiliser une inférence bayésienne complète (Pyro, TFP) au lieu du MC Dropout
+  \item Combiner avec le Neural Hawkes : GRU bayésien pour avoir séquentialité + incertitude
+  \item Ajouter une perte de calibration (ex: CRPS, calibration loss)
+  \item Augmenter la taille du réseau et le nombre d'epochs
+  \item Tester le Concrete Dropout (dropout rate appris)
+\end{itemize}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\newpage
+\section{Synthèse et recommandation}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{keybox}{Classement final}
+\begin{enumerate}
+  \item \textbf{Neural Hawkes (GRU)} — Le meilleur sur toutes les métriques (MAE = 22.11, biais $\approx$ 0). 
+  Sa formulation en processus ponctuel est naturelle pour les séquences d'éclairs.
+  \item \textbf{XGBoost AFT} — Meilleur modèle tabulaire (MAE = 57.28), limité par l'absence 
+  de modélisation séquentielle. Facile à déployer en production.
+  \item \textbf{Baseline (30 min)} — Référence métier (MAE = 60.26). Dépassée en MAE par 
+  XGBoost et Neural Hawkes, mais reste devant le BNN et le Hawkes classique.
+  \item \textbf{BNN MC Dropout} — MAE plus élevée que la baseline (68.20 vs 60.26), mais 
+  apporte une information complémentaire unique : l'incertitude. Son biais quasi nul (+1.42) 
+  et sa capacité à quantifier la confiance en font un candidat intéressant \textit{en complément} 
+  d'un modèle plus précis.
+  \item \textbf{Hawkes Classique} — Le noyau exponentiel univarié est trop faible (MAE = 83.99), 
+  mais le cadre théorique est validé par le succès spectaculaire du Neural Hawkes.
+\end{enumerate}
+\end{keybox}
+
+\vspace{1em}
+
+La recommandation est de retenir le \textbf{Neural Hawkes Process} comme modèle principal, 
+éventuellement enrichi de composantes bayésiennes pour produire des intervalles de confiance 
+opérationnels. Un XGBoost AFT pourrait servir de modèle de repli simple pour les 
+environnements à faibles ressources de calcul.
+
+\end{document}

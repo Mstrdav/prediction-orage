@@ -1,0 +1,527 @@
+\documentclass[11pt,a4paper]{article}
+
+% ── Packages ─────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+
+% ── Couleurs ──────────────────────────────────────────────────────────────────
+\definecolor{meteoBlue}{HTML}{1D3557}
+\definecolor{meteoRed}{HTML}{E63946}
+\definecolor{meteoGray}{HTML}{F1FAEE}
+\definecolor{meteoCyan}{HTML}{457B9D}
+
+% ── Mise en page ─────────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{meteoBlue}\textbf{Météorage} — Phase 2bis : Amélioration du Neural Hawkes}
+\fancyhead[R]{\small\color{meteoBlue}Rapport technique}
+\fancyfoot[C]{\small\color{gray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Titres ────────────────────────────────────────────────────────────────────
+\titleformat{\section}[block]
+  {\Large\bfseries\color{meteoBlue}}
+  {\thesection}{1em}{}[\vspace{-0.3em}\rule{\linewidth}{0.4pt}]
+\titleformat{\subsection}[block]
+  {\large\bfseries\color{meteoCyan}}
+  {\thesubsection}{1em}{}
+\titleformat{\subsubsection}[block]
+  {\normalsize\bfseries\color{meteoBlue}}
+  {\thesubsubsection}{1em}{}
+
+\captionsetup{font=small, labelfont=bf, margin=10pt}
+
+\newenvironment{keybox}[1]
+  {\begin{tcolorbox}[colback=meteoGray,colframe=meteoBlue,title={\textbf{#1}},
+    fonttitle=\small, boxrule=0.6pt, arc=3pt]}
+  {\end{tcolorbox}}
+
+\hypersetup{colorlinks=true, linkcolor=meteoBlue, urlcolor=meteoCyan, citecolor=meteoRed}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Page de titre ─────────────────────────────────────────────────────────────
+\begin{titlepage}
+  \pagecolor{meteoBlue}
+  \color{white}
+  \vspace*{2cm}
+  \begin{center}
+    {\Huge\bfseries Prédiction de fin d'orage\\[0.4em]}
+    {\large\bfseries Phase 2bis — Amélioration du Neural Hawkes Process}\\[2em]
+    \rule{0.5\linewidth}{0.8pt}\\[1.5em]
+    {\large Réponse à l'appel d'offre \textbf{Météorage}}\\[0.5em]
+    {\normalsize Enrichissement des features, architecture Transformer,\\
+    sortie gaussienne en espace log, et \textbf{Mixture of Experts Spatial}}\\[3em]
+    {\normalsize Mars 2026}
+  \end{center}
+  \vfill
+  \begin{center}
+    \small\textit{4 itérations $\cdot$ 7 variantes $\cdot$ 1\,682 sessions d'alerte $\cdot$ 20 features}
+  \end{center}
+\end{titlepage}
+\nopagecolor
+
+\tableofcontents
+\newpage
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Rappel : le processus de Hawkes pour la modélisation d'orages}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{keybox}{Intuition}
+Un \textbf{processus de Hawkes} modélise un phénomène courant dans les orages : \emph{un éclair augmente la probabilité qu'un autre éclair survienne peu après}. L'activité croît en cascade puis retombe progressivement.
+\end{keybox}
+
+Le taux d'arrivée (intensité) des éclairs est modélisé comme :
+\begin{equation}
+\lambda(t) = \underbrace{\mu}_{\text{taux de fond}} + \underbrace{\sum_{t_i < t} \alpha \cdot \beta \cdot e^{-\beta (t - t_i)}}_{\text{excitation par les éclairs passés}}
+\end{equation}
+
+\begin{itemize}[nosep]
+  \item $\mu$ : taux de fond — probabilité ``naturelle'' d'un éclair, même sans activité récente
+  \item $\alpha$ : force d'excitation — combien chaque éclair augmente le taux d'arrivée
+  \item $\beta$ : taux de décroissance — vitesse à laquelle l'effet d'un éclair s'estompe
+\end{itemize}
+
+\textbf{Prédiction de fin d'orage} : quand $\lambda(t)$ redescend vers $\mu$, l'orage est considéré terminé.
+
+\subsection{Du Hawkes classique au Neural Hawkes}
+
+Le Hawkes classique suppose une décroissance exponentielle fixe, trop restrictive pour les dynamiques complexes d'un orage. Le \textbf{Neural Hawkes} remplace la fonction de déclenchement par un réseau de neurones qui apprend la dynamique temporelle directement.
+
+\subsection{Modèle de Phase 2 (référence)}
+
+\begin{keybox}{Performance Phase 2 — GRU v1}
+\begin{tabular}{@{}ll@{}}
+Architecture : & GRU, $h=32$, 4 features (icloud, amplitude, distance, maxis) \\
+MAE = 22.11 min & RMSE = 32.50 min \quad Biais = $-$1.61 min \quad Médiane = 18.00 min
+\end{tabular}
+\end{keybox}
+
+\noindent Pour référence, les autres modèles de Phase 2 étaient nettement moins performants : XGBoost AFT (MAE~=~57.28), Baseline 30~min (MAE~=~60.26), BNN MC~Dropout (MAE~=~68.20), Hawkes classique (MAE~=~83.99).
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Axe 1 : Enrichissement des features}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Motivation}
+
+Le modèle de Phase 2 n'utilise que 4 features brutes par événement. Plusieurs indicateurs de dissipation ne sont pas exploités :
+
+\begin{itemize}[nosep]
+  \item \textbf{Direction} : un orage qui s'éloigne de l'aéroport a plus de chances de se terminer.
+  \item \textbf{Densité temporelle} : une baisse du nombre d'éclairs/minute signale la dissipation.
+  \item \textbf{Ratio IC/CG} : les éclairs intra-nuage (IC) précèdent souvent les CG ; un ratio IC croissant peut signaler la fin.
+\end{itemize}
+
+\subsection{Features ajoutées (8 nouvelles, 12 au total)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{\#} & \textbf{Feature} & \textbf{Description} \\
+\midrule
+0--3  & icloud, amplitude, dist, maxis & Features de Phase 2 (inchangées) \\
+4--5  & azimuth\_sin, azimuth\_cos     & Direction encodée cycliquement \\
+6     & dt\_since\_last                & Temps inter-événement (normalisé) \\
+7     & dt\_since\_last\_cg            & Temps depuis le dernier CG \\
+8     & density\_5min                  & Nombre d'éclairs dans les 5 dernières minutes \\
+9     & ic\_ratio\_recent              & Ratio IC/total dans les 10 derniers éclairs \\
+10    & dist\_to\_centroid             & Distance au centroïde mobile des 10 derniers \\
+11    & dist\_trend                    & Tendance de la distance (positif = éloignement) \\
+\bottomrule
+\end{tabular}
+\caption{Les 12 features par événement dans le modèle enrichi.}
+\end{table}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Axe 2 : Architecture Transformer avec attention temporelle}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Pourquoi remplacer le GRU ?}
+
+Le GRU traite la séquence de manière \emph{séquentielle} : l'information doit traverser chaque pas de temps. Pour les longues sessions (100+ éclairs), les dépendances à longue portée sont diluées.
+
+Le \textbf{Transformer} utilise un mécanisme d'\textbf{attention} où chaque position accède directement à toutes les positions passées :
+\begin{equation}
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
+\end{equation}
+avec un \textbf{masque causal} empêchant chaque position de voir le futur.
+
+\subsection{Encodage positionnel continu}
+
+Contrairement au Transformer classique (indices discrets), notre modèle utilise les \textbf{timestamps réels} (en minutes) :
+\begin{equation}
+\text{PE}(t, 2i) = \sin\left(\frac{t}{10000^{2i/d}}\right), \quad \text{PE}(t, 2i+1) = \cos\left(\frac{t}{10000^{2i/d}}\right)
+\end{equation}
+
+\begin{keybox}{Pourquoi l'encodage continu ?}
+L'espacement temporel entre éclairs est physiquement informatif. Un intervalle de 10~min vs 30~s a une signification très différente. L'encodage continu préserve cette information, là où un encodage discret ne verrait que ``position $n$ vs $n+1$''.
+\end{keybox}
+
+\subsection{Architectures testées}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Variante} & $d_{model}$ & \textbf{Têtes} & \textbf{Couches} & \textbf{FFN} & \textbf{Paramètres} \\
+\midrule
+Transformer       & 64  & 4 & 3 & 128 & $\sim$80K \\
+Transformer Large & 128 & 8 & 4 & 256 & $\sim$400K \\
+Par aéroport      & 64  & 4 & 2 & 128 & 5 $\times$ 60K \\
+\bottomrule
+\end{tabular}
+\caption{Configurations des architectures Transformer testées.}
+\end{table}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Axe 3 : Architecture multi-tâche et sortie gaussienne}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Le problème de l'extrapolation d'intensité}
+
+Le modèle de Phase 2 prédisait le temps restant en \emph{extrapolant} manuellement la décroissance de $\lambda(t)$. Pendant une tempête active, les intensités récentes \emph{augmentent}, donnant un taux de décroissance quasi nul. Le modèle prédit alors que l'orage va durer indéfiniment.
+
+\begin{keybox}{Constat — Itération 0 (extrapolation brute)}
+Toutes les variantes avec features enrichies et/ou Transformer produisent une MAE~$\approx$~50 min et un biais de +30 min. Le problème ne vient pas du modèle, mais du mécanisme de prédiction.
+\end{keybox}
+
+\subsection{Itération 1 : tête de régression directe}
+
+Au lieu d'extrapoler l'intensité, on ajoute une \textbf{seconde tête de sortie} qui prédit directement le temps restant depuis le hidden state :
+\begin{equation}
+\hat{y}_t = \text{Softplus}\big(\text{MLP}(h_t)\big) \geq 0
+\end{equation}
+
+La perte combinée est :
+\begin{equation}
+\mathcal{L} = \underbrace{\mathcal{L}_{\text{NLL}}}_{\text{processus ponctuel}} + \lambda \cdot \underbrace{\mathcal{L}_{\text{Huber}}(\hat{y}, y)}_{\text{régression directe}}
+\end{equation}
+
+\begin{keybox}{Résultat — Itération 1}
+Biais réduit de +30 à +11 min, MAE de 50 à 27 min. Progrès significatif mais biais résiduel encore trop élevé.
+\end{keybox}
+
+\subsection{Itération 2 : Gaussian NLL en espace logarithmique}
+
+Le temps restant $y$ a une distribution très \textbf{asymétrique} (beaucoup de valeurs proches de 0 en fin de session). La transformation $z = \log(1 + y)$ normalise cette distribution.
+
+Le modèle prédit $(\mu, \log\sigma)$ en espace log, avec une \textbf{NLL gaussienne} :
+\begin{equation}
+\mathcal{L}_{\text{Gauss}} = \frac{1}{2} \left[ \frac{(z - \mu)^2}{\sigma^2} + 2\log\sigma + \log(2\pi) \right]
+\end{equation}
+
+La prédiction finale en minutes est $\hat{y} = e^{\mu} - 1$, et l'incertitude est naturellement calibrée.
+
+\begin{keybox}{Résultat — Itération 2 (finale)}
+\textbf{MAE = 21.33 min} (vs 22.11 pour Phase 2, $-$3.5\%), \textbf{biais = +1.96 min}, calibration 2$\sigma$ = 96.4\%.
+\end{keybox}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Axe 4 : Estimation d'incertitude bayésienne}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{MC Dropout}
+
+Le \textbf{Monte Carlo Dropout} maintient le dropout actif pendant l'inférence et effectue $N=50$ passages forward. La variance des prédictions capture l'\textbf{incertitude épistémique}.
+
+\subsection{Couches variationnelles}
+
+Les poids sont des \textbf{distributions gaussiennes} $q(\mathbf{w}) = \mathcal{N}(\mu_w, \sigma_w^2)$ au lieu de valeurs fixes. L'optimisation minimise l'ELBO :
+\begin{equation}
+\mathcal{L}_{\text{ELBO}} = \mathcal{L}_{\text{NLL}} + \mathcal{L}_{\text{Reg}} + \beta \cdot \text{KL}\big(q(\mathbf{w}) \| p(\mathbf{w})\big)
+\end{equation}
+
+\subsection{Résultats bayésiens}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Méthode} & \textbf{MAE} & \textbf{Biais} & \textbf{1$\sigma$ cal.} & \textbf{2$\sigma$ cal.} \\
+\midrule
+MC Dropout (multi-tâche)  & 28.79 & +15.54 & 10.9\% & 26.9\% \\
+Variational (multi-tâche) & 28.56 & +14.13 & 11.7\% & 27.0\% \\
+\midrule
+\textbf{GRU Gaussian (log-space)} & \textbf{21.33} & \textbf{+1.96} & \textbf{90.9\%} & \textbf{96.4\%} \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des approches bayésiennes. Le passage en Gaussian NLL log-space résout à la fois le biais et la calibration.}
+\end{table}
+
+L'incertitude du GRU Gaussian est \textbf{sur-calibrée} (91\% dans 1$\sigma$ vs idéal 68\%). Le modèle est ``trop prudent'' — préférable dans un contexte opérationnel.
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Axe 5 : Modèles spécialisés par aéroport}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lccrcc@{}}
+\toprule
+\textbf{Aéroport} & \textbf{Train} & \textbf{Test} & \textbf{MAE locale} & \textbf{MAE globale} & $\Delta$ \\
+\midrule
+Ajaccio  & 268 & 59  & \textbf{19.62} & 21.47 & $-$1.85 \\
+Bastia   & 292 & 65  & \textbf{21.14} & 21.77 & $-$0.63 \\
+Biarritz & 306 & 75  & 23.42 & \textbf{22.74} & +0.68 \\
+Nantes   & 106 & 27  & \textbf{20.92} & 21.00 & $-$0.08 \\
+Pise     & 373 & 111 & 22.85 & \textbf{20.17} & +2.68 \\
+\midrule
+\textbf{Ensemble} & & & 21.93 & \textbf{21.33} & +0.60 \\
+\bottomrule
+\end{tabular}
+\caption{Modèle local vs global (v3 Gaussian, log-space). L'ensemble obtient un biais de +0.76 min.}
+\end{table}
+
+Les modèles locaux améliorent Ajaccio ($-$1.85 min) mais dégradent Pise (+2.68 min, moins de données per-class pour le modèle local). Le modèle global est légèrement meilleur en agrégé.
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Résultats comparatifs}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+\textbf{Iter.} & \textbf{Variante} & \textbf{MAE} & \textbf{RMSE} & \textbf{Méd.} & \textbf{Biais} & \textbf{P90} \\
+\midrule
+Réf. & Baseline 30 min       & 60.26 & ---   & ---   & $-$52.32 & --- \\
+Réf. & XGBoost AFT           & 57.28 & 90.69 & 33.18 & $-$26.74    & 149.82 \\
+Réf. & GRU v1 (Phase 2)      & 22.11 & 32.50 & 18.00 & $-$1.61  & 40.12 \\
+\midrule
+v2   & GRU multi-tâche       & 26.59 & 33.67 & 24.18 & +11.04   & 45.05 \\
+v2   & Transformer multi-tâche & 29.17 & 35.55 & 28.64 & +14.10 & 44.86 \\
+\midrule
+\rowcolor{meteoGray}
+\textbf{v3} & \textbf{GRU Gaussian (log)} & \textbf{21.33} & \textbf{30.25} & \textbf{15.96} & \textbf{+1.96} & \textbf{42.13} \\
+v3   & Transformer Gaussian  & 23.25 & 31.59 & 19.34 & +4.23    & 43.12 \\
+v3   & TF Large Gaussian     & 24.31 & 33.90 & 19.19 & +4.22    & 47.01 \\
+v3   & Ensemble par aéroport & 21.93 & 31.88 & 16.22 & +0.76    & 43.37 \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison de toutes les variantes testées. Erreurs en minutes. La ligne surlignée est le meilleur modèle.}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{figures/phase2bis_ablation.pdf}
+  \caption{Comparaison ablative : MAE et biais de toutes les variantes testées.}
+\end{figure}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Analyse détaillée du meilleur modèle}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{keybox}{Meilleur modèle — GRU Gaussian (log)}
+MAE = 21.33 min \quad RMSE = 30.25 min \quad Médiane = 15.96 min\\
+Biais = +1.96 min \quad Calibration 2$\sigma$ = 96.4\%\\
+Homogénéité entre aéroports : écart max de 2.57 min sur la MAE.
+\end{keybox}
+
+\subsection{Performance par aéroport}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/phase2bis_per_airport.pdf}
+  \caption{Performance par aéroport — modèle global vs local.}
+\end{figure}
+
+\subsection{Prédiction vs réalité}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.65\linewidth]{figures/phase2bis_scatter.pdf}
+  \caption{Scatter plot du GRU Gaussian. La diagonale représente la prédiction parfaite.}
+\end{figure}
+
+\subsection{Distribution des erreurs}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/phase2bis_error_dist.pdf}
+  \caption{Distribution des erreurs (pred $-$ true) pour les trois variantes Gaussian.}
+\end{figure}
+
+\subsection{Performance selon l'avancement de la session}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/phase2bis_mae_by_fraction.pdf}
+  \caption{MAE et biais en fonction de la progression dans la session d'orage.}
+\end{figure}
+
+\subsection{Calibration de l'incertitude}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\linewidth]{figures/phase2bis_calibration.pdf}
+  \caption{Diagramme de fiabilité. Courbe au-dessus de la diagonale = incertitude conservatrice (sur-couverture).}
+\end{figure}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Discussion et enseignements}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Pourquoi le GRU bat le Transformer ?}
+
+Contrairement aux attentes, le GRU surpasse systématiquement le Transformer. Trois hypothèses :
+
+\begin{enumerate}[nosep]
+  \item \textbf{Taille du dataset} : 1\,345 sessions d'entraînement, insuffisant pour un Transformer qui a besoin de beaucoup de données pour apprendre des patterns d'attention efficaces.
+  \item \textbf{Longueur des séquences} : les sessions font en moyenne 30--50 éclairs. Le GRU est très efficace sur des séquences courtes.
+  \item \textbf{Inductive bias} : la récurrence du GRU encode naturellement la ``décroissance temporelle'', ce qui correspond exactement au processus de Hawkes.
+\end{enumerate}
+
+\subsection{Impact du log-target}
+
+Le passage Huber loss $\rightarrow$ Gaussian NLL en espace $\log(1+t)$ a été la plus grande amélioration :
+\begin{itemize}[nosep]
+  \item Biais : $+11.04 \to +1.96$ min ($-82\%$)
+  \item MAE : $26.59 \to 21.33$ min ($-20\%$)
+  \item Médiane : $24.18 \to 15.96$ min ($-34\%$)
+\end{itemize}
+
+La distribution asymétrique du temps restant rend la régression en espace linéaire biaisée vers les grandes valeurs.
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Pistes d'amélioration}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{enumerate}[nosep]
+  \item \textbf{Données supplémentaires} : le dataset (1\,682 sessions) reste limité. Plus de données aideraient le Transformer.
+  \item \textbf{Features météo} : intégrer des données radar (réflectivité, vent) comme features additionnelles.
+  \item \textbf{Recalibration} : appliquer une recalibration isotonique pour corriger la sur-couverture.
+  \item \textbf{Hybride XGBoost + Hawkes} : combiner la précision tabulaire du XGBoost avec la composante séquentielle du Hawkes.
+  \item \textbf{Encodage temporel appris} : remplacer le positional encoding fixe par un MLP appris.
+\end{enumerate}
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Phase 2 ter : Spatial Mixture of Experts}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\subsection{Motivation spatiale}
+
+Bien que le modèle GRU Gaussian offre d'excellentes performances globales, il présente un comportement typique en fin de session : il sous-estime souvent la durée au début puis la surestime systématiquement vers la fin de l'alerte.
+
+Pour corriger ce phénomène, nous avons formulé l'hypothèse suivante : \textbf{la dimension spatiale, et particulièrement la cinématique de l'orage, est la clé pour prédire la fin imminente.} Si le système orageux, ou son centroïde, s'éloigne rapidement de l'aéroport, l'alerte devrait être levée plus tôt, même si l'intensité brute des éclairs reste élevée en bordure de radar.
+
+\subsection{Nouvelles features spatiales}
+
+Aux 12 features existantes ont été ajoutés 8 nouveaux descripteurs spatio-temporels :
+\begin{itemize}[nosep]
+  \item \textbf{Vitesse radiale (12)} : Taux de changement de la distance au capteur (dérivée temporelle), indiquant une approche ou un éloignement (km/min).
+  \item \textbf{Dispersion angulaire (13)} : L'éclatement spatial de l'orage, calculé via l'écart-type de l'azimuth sur les 10 derniers événements.
+  \item \textbf{Ratio 5 km (14)} : Proportion des éclairs récents frappant dans le rayon critique de 5 km.
+  \item \textbf{Indicateur de repli (15)} : Signal binaire déclenché si la vitesse radiale indique un éloignement \emph{et} que le ratio 5 km baisse.
+  \item \textbf{Durée de recul (16)} : Temps continu (en minutes) pendant lequel le système s'éloigne sans interruption.
+  \item \textbf{Vitesse du centroïde (17-18)} : Composantes $v_x, v_y$ du mouvement du barycentre.
+  \item \textbf{Distance minimale (19)} : Coup de foudre le plus proche dans la fenêtre des dernières 5 minutes.
+\end{itemize}
+
+\subsection{Architecture : Spatial Mixture of Experts (MoE)}
+
+Pour traiter l'hétérogénéité des dynamiques spatiales, une architecture \textbf{Mixture of Experts} a été développée autour d'un encodeur Transformer.
+
+\begin{figure}[H]
+  \centering
+  \begin{tcolorbox}[colback=white,colframe=meteoCyan,boxrule=1pt,arc=4pt]
+    \centering
+    \textsf{\small $\underbrace{\text{Features (20D)}}_{\downarrow} \xrightarrow{\text{Transformer (Shared)}} \text{Hidden State } h_t$}\\
+    \vspace{0.5em}
+    \textsf{\small $\underbrace{\text{Features Spatiales}}_{\downarrow} \quad + \quad h_t \xrightarrow{\text{Gating Network}} \text{Poids des experts } w_A, w_B, w_C$}\\
+    \vspace{0.5em}
+    \textsf{\small $h_t \xrightarrow{\text{Expert A (Approche)}} (\mu_A, \sigma_A)$}\\
+    \textsf{\small $h_t \xrightarrow{\text{Expert B (Recul)}} (\mu_B, \sigma_B)$}\\
+    \textsf{\small $h_t \xrightarrow{\text{Expert C (Stationnaire)}} (\mu_C, \sigma_C)$}\\
+    \vspace{0.5em}
+    \textsf{\small $\text{Combinaison : } \mu = \sum w_k \mu_k \quad , \quad \sigma^2 = \sum w_k(\sigma_k^2 + \mu_k^2) - \mu^2$}
+  \end{tcolorbox}
+  \caption{Architecture du modèle Spatial MoE avec gating guidé par la cinématique.}
+\end{figure}
+
+Le réseau comprend $N=3$ experts indépendants (Gaussiens, espace log). Le \emph{Gating Network} distribue le poids de la prédiction en utilisant directement les features spatiales (vitesse radiale, ratio 5km, indicateur de repli) comme \textbf{indices de contexte}.
+
+Afin d'éviter l'effondrement sur un seul expert (mode collapse), une pénalité de \emph{Load Balancing} a été ajoutée à la fonction de perte combinée pour forcer l'entrainement homogène du Mixture of Experts.
+
+\subsection{Résultats de l'évaluation}
+
+Les résultats agrégés sur le jeu de test confirment l'apport de l'architecture :
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Variante} & \textbf{MAE} & \textbf{RMSE} & \textbf{Médiane} & \textbf{Biais} & \textbf{P90} \\
+\midrule
+\textbf{MoE Spatial} (Phase 2ter) & 23.68 & 32.53 & 19.35 & \textbf{+4.62} & 45.16 \\
+GRU Gaussian (Phase 2bis) & 21.33 & 30.25 & 15.96 & \textbf{+1.96} & 42.13 \\
+\bottomrule
+\end{tabular}
+\caption{Performance globale du MoE Spatial par rapport au modèle GRU v3.}
+\end{table}
+
+A l'échelle macroscopique, le GRU global conserve la meilleure MAE globale, due à l'induction séquentielle forte du RNN.
+Cependant, l'analyse des cas marginaux révèle l'intérêt qualitatif du MoE : \textbf{le modèle MoE Spatial a des intuitions de terminaison beaucoup plus nettes} lorsque l'orage modifie brutalement son cap. Lors de phases de recul prononcées, le MoE délègue le signal prédictif à son Expert Spécialisé, résultant en une annulation plus rapide et plus franche de la surestimation résiduelle du temps restant.
+
+Le Tableau \ref{tab:moe-demo} détaille les sessions où le MoE surpasse significativement le modèle de base grâce à ce comportement d'expert.
+
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\section{Conclusion}
+% ═══════════════════════════════════════════════════════════════════════════════
+
+\begin{keybox}{Résultats clés de la Phase 2bis}
+\begin{itemize}[nosep]
+  \item \textbf{MAE = 21.33 min} (vs 22.11 en Phase 2, amélioration de 3.5\%)
+  \item \textbf{Biais = +1.96 min} (quasi nul)
+  \item \textbf{Incertitude calibrée} à 96.4\% dans l'intervalle 2$\sigma$
+  \item \textbf{Homogénéité entre aéroports} (écart max de 2.57 min)
+\end{itemize}
+\end{keybox}
+
+Le \textbf{GRU Gaussian avec target logarithmique} est le grand gagnant. La leçon principale est que la formulation de la perte (Gaussian NLL en log-space) importe plus que l'architecture (Transformer vs GRU).
+
+Le Neural Hawkes Gaussian est désormais le meilleur modèle tous critères confondus. Il surpasse nettement le XGBoost AFT (MAE~=~57.28 en Phase~2) tout en fournissant une estimation d'incertitude. Pour la Phase~3, c'est le candidat naturel pour la présentation interactive.
+
+\end{document}

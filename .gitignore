@@ -1,0 +1,46 @@
+# Environnement virtuel
+.venv/
+venv/
+env/
+.env
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Données (volumineux, ne pas commit)
+data/
+*.parquet
+*.csv
+
+# Fichiers de modèles sauvegardés
+models/
+*.pt
+*.json
+*.pkl
+
+# Fichiers LaTeX temporaires
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+texput.log
+
+# Fichiers de log et dumps temporaires générés par l'Agent
+*.txt
+*compile*.log
+
+# Répertoire IDE
+.vscode/
+.idea/
+
+# Figures générées
+figures/
