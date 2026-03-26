@@ -1,5 +1,5 @@
 """
-spatial_features.py – Phase 2ter : Features spatiales enrichies pour MoE.
+spatial_features.py - Phase 2ter : Features spatiales enrichies pour MoE.
 
 Ajoute 8 features spatiales aux 12 features existantes de prepare_sessions_v2,
 soit 20 features par événement.

@@ -1,5 +1,5 @@
 """
-export_demo_sessions.py – Exporte des sessions d'orage avec prédictions
+export_demo_sessions.py - Exporte des sessions d'orage avec prédictions
 pour la présentation interactive Phase 2ter.
 
 Exporte les prédictions des deux modèles :

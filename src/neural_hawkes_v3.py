@@ -1,5 +1,5 @@
 """
-neural_hawkes_v3.py – Phase 2bis : itération finale.
+neural_hawkes_v3.py - Phase 2bis : itération finale.
 
 Améliorations par rapport à v2 :
   - Log-scale target : log(1 + time_to_end) pour normaliser la distribution asymétrique
@@ -584,7 +584,7 @@ def run_v3_experiments(sessions, test_ratio=0.2):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  PHASE 2bis – Itération 2 : Gaussian NLL + log-target")
+    print("  PHASE 2bis - Itération 2 : Gaussian NLL + log-target")
     print("=" * 60)
     
     print("\nLoading data...")

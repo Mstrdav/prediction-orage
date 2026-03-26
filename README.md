@@ -1,4 +1,4 @@
-# 🏆 Data Battle IA PAU 2026 – Projet Météorage
+# 🏆 Data Battle IA PAU 2026 - Projet Météorage
 
 ## 👥 Équipe
 - Nom de l’équipe : Les Vieux Briscards
@@ -51,7 +51,7 @@ Placer les données et notamment le fichier d'entraînement (`segment_alerts_all
 ### Exécution
 
 - **Rapport** :
-Les rapports sont disponibles au lien suivant : [EDA](https://mstrdav.github.io/prediction-orage/eda_report.pdf), [Comparaison de modèles](https://mstrdav.github.io/prediction-orage/model_report.pdf), [Amélioration du Neural Hawkes](https://mstrdav.github.io/prediction-orage/phase2bis_report.pdf).
+Les rapports sont disponibles au lien suivant : [EDA](https://mstrdav.github.io/prediction-orage/report/eda_report.pdf), [Comparaison de modèles](https://mstrdav.github.io/prediction-orage/report/model_report.pdf), [Amélioration du Neural Hawkes](https://mstrdav.github.io/prediction-orage/report/phase2bis_report.pdf).
 - **Entraînements complets** :
 Les entraînements des divers modèles Hawkes et spatiaux peuvent être rejoués à travers les scripts situés sous `src/` (ex: `python src/spatial_moe_model.py`).
 - **Démonstration Web** :

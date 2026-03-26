@@ -54,9 +54,9 @@ sessions = get_alert_sessions(df)
 print(f"  {len(df):,} eclairs | {df['airport'].nunique()} aeroports | {len(sessions)} sessions")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 1 – Distribution des éclairs par aéroport (bar + pie)
+# FIG 1 - Distribution des éclairs par aéroport (bar + pie)
 # ----------------------------------------------------═══════════════════════════
-print("Fig 1 – Éclairs par aéroport…")
+print("Fig 1 - Éclairs par aéroport…")
 counts = df.groupby("airport").size().sort_values(ascending=False)
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
@@ -80,9 +80,9 @@ plt.tight_layout()
 savefig("fig1_airport_counts")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 2 – Distribution temporelle (mensuelle et horaire)
+# FIG 2 - Distribution temporelle (mensuelle et horaire)
 # ----------------------------------------------------═══════════════════════════
-print("Fig 2 – Distribution temporelle…")
+print("Fig 2 - Distribution temporelle…")
 df["month"] = df["date"].dt.month
 df["hour"] = df["date"].dt.hour
 df["year"] = df["date"].dt.year
@@ -112,9 +112,9 @@ plt.tight_layout()
 savefig("fig2_temporal")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 3 – Heatmap mois × heure
+# FIG 3 - Heatmap mois × heure
 # ----------------------------------------------------═══════════════════════════
-print("Fig 3 – Heatmap mois × heure…")
+print("Fig 3 - Heatmap mois × heure…")
 heat = df.groupby(["month", "hour"]).size().unstack(fill_value=0)
 
 fig, ax = plt.subplots(figsize=(13, 4))
@@ -129,9 +129,9 @@ plt.tight_layout()
 savefig("fig3_heatmap_month_hour")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 4 – Heatmap par aéroport et mois
+# FIG 4 - Heatmap par aéroport et mois
 # ----------------------------------------------------═══════════════════════════
-print("Fig 4 – Heatmap aéroport × mois…")
+print("Fig 4 - Heatmap aéroport × mois…")
 heat2 = df.groupby(["airport", "month"]).size().unstack(fill_value=0)
 
 fig, ax = plt.subplots(figsize=(12, 3.5))
@@ -146,9 +146,9 @@ plt.tight_layout()
 savefig("fig4_heatmap_airport_month")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 5 – Caractéristiques physiques des éclairs
+# FIG 5 - Caractéristiques physiques des éclairs
 # ----------------------------------------------------═══════════════════════════
-print("Fig 5 – Caractéristiques physiques…")
+print("Fig 5 - Caractéristiques physiques…")
 fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
 # Amplitude
@@ -190,9 +190,9 @@ plt.tight_layout()
 savefig("fig5_physics")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 6 – Rose des azimuts par aéroport
+# FIG 6 - Rose des azimuts par aéroport
 # ----------------------------------------------------═══════════════════════════
-print("Fig 6 – Rose des azimuts…")
+print("Fig 6 - Rose des azimuts…")
 airports = df["airport"].unique()
 n = len(airports)
 fig = plt.figure(figsize=(14, 3.5))
@@ -217,9 +217,9 @@ plt.tight_layout()
 savefig("fig6_azimuth_rose")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 7 – Carte de dispersion géographique
+# FIG 7 - Carte de dispersion géographique
 # ----------------------------------------------------═══════════════════════════
-print("Fig 7 – Carte géographique…")
+print("Fig 7 - Carte géographique…")
 airport_coords = {
     "Ajaccio":  (41.9236, 8.8029),
     "Bastia":   (42.5527, 9.4836),
@@ -264,9 +264,9 @@ plt.tight_layout()
 savefig("fig7_geo_scatter")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 8 – Analyse des sessions d'alerte
+# FIG 8 - Analyse des sessions d'alerte
 # ----------------------------------------------------═══════════════════════════
-print("Fig 8 – Sessions d'alerte…")
+print("Fig 8 - Sessions d'alerte…")
 fig, axes = plt.subplots(1, 3, figsize=(14, 4))
 
 # Durée des sessions (filtre des sessions > 1 éclair pour la durée)
@@ -301,9 +301,9 @@ plt.tight_layout()
 savefig("fig8_sessions")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 9 – Durée médiane des sessions par aéroport (Boxplot -> ViolinPlot)
+# FIG 9 - Durée médiane des sessions par aéroport (Boxplot -> ViolinPlot)
 # ----------------------------------------------------═══════════════════════════
-print("Fig 9 – Durée sessions par aéroport…")
+print("Fig 9 - Durée sessions par aéroport…")
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
 airports_sorted = sorted(sessions["airport"].unique())
@@ -336,9 +336,9 @@ plt.tight_layout()
 savefig("fig9_sessions_by_airport")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 10 – Analyse de la variable cible
+# FIG 10 - Analyse de la variable cible
 # ----------------------------------------------------═══════════════════════════
-print("Fig 10 – Variable cible…")
+print("Fig 10 - Variable cible…")
 cg_only = alerts[~alerts["icloud"]]  # éclairs cloud-to-ground dans sessions
 
 fig, axes = plt.subplots(1, 3, figsize=(14, 4))
@@ -408,9 +408,9 @@ plt.tight_layout()
 savefig("fig10_target_analysis")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 11 – Exemple de session d'alerte (timeline)
+# FIG 11 - Exemple de session d'alerte (timeline)
 # ----------------------------------------------------═══════════════════════════
-print("Fig 11 – Exemple de session…")
+print("Fig 11 - Exemple de session…")
 # Choisir une session de taille représentative AVEC des IC (critères relâchés)
 good_sessions = sessions[(sessions["n_lightnings"] > 50) & (sessions["n_ic"] >= 5) & (sessions["duration_min"] > 30) & (sessions["duration_min"] < 150)]
 if len(good_sessions) > 0:
@@ -434,7 +434,7 @@ if len(good_sessions) > 0:
         axes[0].axvline(last_cg["t_min"].values[0], color="black", linestyle="--",
                         linewidth=1.5, label=f"Dernier éclair CG ({last_cg['t_min'].values[0]:.1f} min)")
     axes[0].set_ylabel("Distance à l'aéroport (km)")
-    axes[0].set_title(f"Session d'alerte – {ex_airport} (alerte #{int(ex_alert_id)})", fontweight="bold")
+    axes[0].set_title(f"Session d'alerte - {ex_airport} (alerte #{int(ex_alert_id)})", fontweight="bold")
     axes[0].legend(fontsize=8)
 
     axes[1].bar(cg["t_min"], cg["amplitude"].abs(), width=0.5,
@@ -447,9 +447,9 @@ if len(good_sessions) > 0:
     savefig("fig11_session_example")
 
 # ----------------------------------------------------═══════════════════════════
-# FIG 12 – Matrice de corrélation
+# FIG 12 - Matrice de corrélation
 # ----------------------------------------------------═══════════════════════════
-print("Fig 12 – Matrice de corrélation…")
+print("Fig 12 - Matrice de corrélation…")
 num_cols = ["amplitude", "maxis", "dist", "azimuth"]
 corr = df[num_cols].corr()
 
@@ -459,7 +459,7 @@ sns.heatmap(corr, ax=ax, annot=True, fmt=".2f", cmap="RdBu_r",
             center=0, vmin=-1, vmax=1,
             square=True, linewidths=0.5,
             cbar_kws={"shrink": 0.8})
-ax.set_title("Matrice de corrélation – variables physiques", fontweight="bold")
+ax.set_title("Matrice de corrélation - variables physiques", fontweight="bold")
 plt.tight_layout()
 savefig("fig12_correlation")
 

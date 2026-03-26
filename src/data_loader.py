@@ -1,5 +1,5 @@
 """
-data_loader.py – Chargement et préparation du dataset Météorage.
+data_loader.py - Chargement et préparation du dataset Météorage.
 """
 import pandas as pd
 from pathlib import Path

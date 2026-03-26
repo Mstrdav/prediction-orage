@@ -1,5 +1,5 @@
 """
-generate_phase2bis_figures.py – Figures pour le rapport Phase 2bis.
+generate_phase2bis_figures.py - Figures pour le rapport Phase 2bis.
 Thème identique aux figures Phase 2 (couleurs Météorage, styles).
 """
 import sys, os

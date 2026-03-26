@@ -1,5 +1,5 @@
 """
-spatial_moe_model.py – Phase 2ter : Spatial Mixture of Experts.
+spatial_moe_model.py - Phase 2ter : Spatial Mixture of Experts.
 
 Architecture MoE avec 3 experts spécialisés :
   - Expert A (Approaching) : orage qui s'approche
@@ -626,7 +626,7 @@ def run_moe_experiment(sessions, test_ratio=0.2):
 
 if __name__ == "__main__":
     print("=" * 65)
-    print("  PHASE 2ter – Spatial Mixture of Experts")
+    print("  PHASE 2ter - Spatial Mixture of Experts")
     print("=" * 65)
     
     print("\nLoading data...")

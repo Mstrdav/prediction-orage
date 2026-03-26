@@ -1,5 +1,5 @@
 """
-neural_hawkes_v2.py – Phase 2bis : Neural Hawkes Process amélioré.
+neural_hawkes_v2.py - Phase 2bis : Neural Hawkes Process amélioré.
 
 Architecture Multi-Tâche :
   - Tâche 1 (NLL) : apprendre la dynamique temporelle du processus ponctuel
@@ -649,7 +649,7 @@ def evaluate_all_variants(sessions, test_ratio=0.2):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  PHASE 2bis – Neural Hawkes Process : Améliorations")
+    print("  PHASE 2bis - Neural Hawkes Process : Améliorations")
     print("=" * 60)
     
     print("\nLoading data...")

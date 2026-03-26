@@ -1,5 +1,5 @@
 """
-hawkes_models.py – Processus de Hawkes Classique et Neural Hawkes Process.
+hawkes_models.py - Processus de Hawkes Classique et Neural Hawkes Process.
 
 Le processus de Hawkes modélise l'intensité d'arrivée des éclairs comme :
     lambda(t) = mu + sum_{t_i < t} alpha * beta * exp(-beta * (t - t_i))

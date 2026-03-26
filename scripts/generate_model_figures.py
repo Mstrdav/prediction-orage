@@ -1,5 +1,5 @@
 """
-generate_model_figures.py – Génère les figures d'illustration pour les rapports PDF de chaque modèle.
+generate_model_figures.py - Génère les figures d'illustration pour les rapports PDF de chaque modèle.
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))

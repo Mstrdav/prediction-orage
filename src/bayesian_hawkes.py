@@ -1,5 +1,5 @@
 """
-bayesian_hawkes.py – Bayesian Neural Hawkes Process (multi-tâche).
+bayesian_hawkes.py - Bayesian Neural Hawkes Process (multi-tâche).
 
 Deux approches :
   Option A : MC Dropout sur le Transformer Hawkes
@@ -536,7 +536,7 @@ def run_bayesian_experiments(sessions, test_ratio=0.2):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  PHASE 2bis – Bayesian Neural Hawkes Process")
+    print("  PHASE 2bis - Bayesian Neural Hawkes Process")
     print("=" * 60)
     
     print("\nLoading data...")

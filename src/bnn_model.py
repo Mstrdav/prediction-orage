@@ -1,5 +1,5 @@
 """
-bnn_model.py – Bayesian Neural Network pour la prédiction du temps restant.
+bnn_model.py - Bayesian Neural Network pour la prédiction du temps restant.
 
 Utilise Monte Carlo Dropout comme approximation bayésienne :
 - Pendant l'entraînement ET l'inférence, le dropout reste actif.
