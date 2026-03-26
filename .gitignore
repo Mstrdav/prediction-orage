@@ -22,6 +22,7 @@ data/
 models/
 *.pt
 *.json
+!interactive/*.json
 *.pkl
 
 # Fichiers LaTeX temporaires
