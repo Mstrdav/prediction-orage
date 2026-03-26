@@ -1,997 +1,1301 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Météorage — Replay interactif de sessions d'orage</title>
-<style>
-  :root {
-    --meteoBlue: #1D3557;
-    --meteoCyan: #457B9D;
-    --meteoSky: #A8DADC;
-    --meteoRed: #E63946;
-    --meteoGray: #F1FAEE;
-    --meteoOrange: #E07A5F;
-    --meteoGreen: #52B788;
-    --bg: #0d1b2a;
-    --card: #1b2838;
-    --text: #F1FAEE;
-    --textDim: #8899aa;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--bg); color: var(--text);
-    height: 100vh; overflow: hidden;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Météorage — Replay interactif de sessions d'orage</title>
+  <style>
+    :root {
+      --meteoBlue: #1D3557;
+      --meteoCyan: #457B9D;
+      --meteoSky: #A8DADC;
+      --meteoRed: #E63946;
+      --meteoGray: #F1FAEE;
+      --meteoOrange: #E07A5F;
+      --meteoGreen: #52B788;
+      --bg: #0d1b2a;
+      --card: #1b2838;
+      --text: #F1FAEE;
+      --textDim: #8899aa;
+    }
 
-  header {
-    background: var(--meteoBlue); padding: 12px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4); height: 50px;
-  }
-  header h1 { font-size: 1.15rem; font-weight: 700; }
-  header h1 span { color: var(--meteoSky); font-weight: 400; }
-  header .subtitle { color: var(--meteoSky); font-size: 0.8rem; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  .main { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 50px); }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
 
-  .sidebar {
-    background: var(--card); padding: 16px;
-    border-right: 1px solid rgba(255,255,255,0.06);
-    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
-  }
-  .sidebar h2 {
-    font-size: 0.7rem; text-transform: uppercase;
-    letter-spacing: 0.1em; color: var(--textDim); margin-bottom: 4px;
-  }
-  .airport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-  .airport-btn {
-    padding: 7px 10px; border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px; background: transparent; color: var(--text);
-    font-size: 0.8rem; cursor: pointer; text-align: center; transition: all 0.15s;
-  }
-  .airport-btn:hover { background: rgba(69,123,157,0.2); border-color: var(--meteoCyan); }
-  .airport-btn.active { background: var(--meteoCyan); border-color: var(--meteoCyan); font-weight: 600; }
+    header {
+      background: var(--meteoBlue);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      height: 50px;
+    }
 
-  .session-list { display: flex; flex-direction: column; gap: 4px; }
-  .session-btn {
-    padding: 6px 10px; border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 5px; background: transparent; color: var(--textDim);
-    font-size: 0.75rem; cursor: pointer; text-align: left; transition: all 0.15s;
-  }
-  .session-btn:hover { background: rgba(69,123,157,0.12); color: var(--text); }
-  .session-btn.active { background: rgba(69,123,157,0.25); color: var(--text); border-color: var(--meteoCyan); }
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
 
-  /* Model toggle */
-  .model-toggle {
-    display: flex; flex-direction: column; gap: 5px;
-  }
-  .model-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 8px; border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.08);
-    font-size: 0.75rem; cursor: pointer;
-    transition: background 0.12s;
-  }
-  .model-row:hover { background: rgba(255,255,255,0.04); }
-  .model-row input[type=checkbox] { accent-color: var(--meteoCyan); width: 14px; height: 14px; }
-  .model-row .dot { width: 12px; height: 3px; border-radius: 2px; flex-shrink: 0; }
-  .model-row.gru .dot   { background: var(--meteoCyan); }
-  .model-row.moe .dot   { background: var(--meteoGreen); }
-  .model-row.gru { color: var(--meteoCyan); }
-  .model-row.moe { color: var(--meteoGreen); }
+    header h1 span {
+      color: var(--meteoSky);
+      font-weight: 400;
+    }
 
-  .controls { display: flex; gap: 6px; }
-  .btn {
-    padding: 7px 16px; border: none; border-radius: 5px;
-    font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.12s;
-  }
-  .btn-play { background: var(--meteoCyan); color: white; min-width: 90px; }
-  .btn-play:hover { background: #5a99b8; }
-  .btn-play.playing { background: var(--meteoOrange); }
-  .btn-reset { background: rgba(255,255,255,0.06); color: var(--textDim); }
-  .btn-reset:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+    header .subtitle {
+      color: var(--meteoSky);
+      font-size: 0.8rem;
+    }
 
-  .speed-row { display: flex; align-items: center; gap: 6px; }
-  .speed-row label { font-size: 0.7rem; color: var(--textDim); white-space: nowrap; }
-  .speed-row input[type=range] { flex: 1; accent-color: var(--meteoCyan); }
-  .speed-row span { font-size: 0.75rem; color: var(--textDim); min-width: 24px; }
+    .main {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      height: calc(100vh - 50px);
+    }
 
-  .content {
-    padding: 16px; display: grid;
-    grid-template-rows: auto 1fr auto; gap: 12px; overflow: hidden;
-  }
+    .sidebar {
+      background: var(--card);
+      padding: 16px;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
 
-  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-  .metric-card {
-    background: var(--card); border-radius: 10px; padding: 12px 16px;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .metric-card .label {
-    font-size: 0.65rem; text-transform: uppercase;
-    letter-spacing: 0.08em; color: var(--textDim); margin-bottom: 2px;
-  }
-  .metric-card .value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
-  .metric-card .unit { font-size: 0.8rem; font-weight: 400; color: var(--textDim); }
-  .metric-card .sub { font-size: 0.7rem; color: var(--textDim); margin-top: 1px; }
-  .val-gru    { color: var(--meteoCyan); }
-  .val-moe    { color: var(--meteoGreen); }
-  .val-true   { color: var(--meteoSky); }
-  .val-unc    { color: var(--meteoOrange); }
-  .val-events { color: var(--meteoRed); }
+    .sidebar h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--textDim);
+      margin-bottom: 4px;
+    }
 
-  /* 2-column layout for chart and map */
-  .visuals-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 12px;
-    min-height: 0;
-  }
+    .airport-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
 
-  .panel {
-    background: var(--card); border-radius: 10px; padding: 14px 16px;
-    border: 1px solid rgba(255,255,255,0.05); overflow: hidden;
-    position: relative; display: flex; flex-direction: column;
-  }
-  .panel-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
-  }
-  .panel-header h3 {
-    font-size: 0.75rem; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--textDim);
-  }
-  .panel-legend { display: flex; gap: 12px; font-size: 0.68rem; color: var(--textDim); flex-wrap: wrap; }
-  .panel-legend span { display: flex; align-items: center; gap: 5px; }
-  .panel-legend .dot { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .airport-btn {
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.8rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
 
-  /* Colorbar for map */
-  .colorbar {
-    width: 60px; height: 6px; border-radius: 3px; display: inline-block;
-    background: linear-gradient(90deg, #1D3557, #457B9D, #A8DADC, #F4A261, #E63946);
-  }
+    .airport-btn:hover {
+      background: rgba(69, 123, 157, 0.2);
+      border-color: var(--meteoCyan);
+    }
 
-  canvas { display: block; width: 100%; flex: 1; min-height: 0; }
+    .airport-btn.active {
+      background: var(--meteoCyan);
+      border-color: var(--meteoCyan);
+      font-weight: 600;
+    }
 
-  .timeline-container {
-    background: var(--card); border-radius: 10px; padding: 10px 16px;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .timeline-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
-  }
-  .timeline-header h3 {
-    font-size: 0.75rem; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--textDim);
-  }
-  .timeline-time { font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--meteoCyan); }
-  .timeline-bar {
-    position: relative; height: 32px;
-    background: rgba(255,255,255,0.03); border-radius: 5px;
-    overflow: hidden; cursor: pointer;
-  }
-  .timeline-progress {
-    position: absolute; top: 0; left: 0; height: 100%;
-    background: linear-gradient(90deg, rgba(29,53,87,0.6), rgba(69,123,157,0.4));
-    border-radius: 5px;
-  }
-  /* Zone post-alerte (baseline) */
-  .timeline-baseline-zone {
-    position: absolute; top: 0; height: 100%;
-    background: rgba(230,57,70,0.07); border-left: 1px solid rgba(230,57,70,0.3);
-    pointer-events: none;
-  }
-  .timeline-event { position: absolute; top: 50%; transform: translateY(-50%); width: 2px; border-radius: 1px; }
-  .timeline-event.cg { background: var(--meteoRed); height: 22px; opacity: 0.8; }
-  .timeline-event.ic { background: var(--meteoSky); height: 12px; opacity: 0.35; }
+    .session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
-  .empty-state {
-    display: flex; align-items: center; justify-content: center;
-    height: 100%; color: var(--textDim); font-size: 1rem;
-    flex-direction: column; gap: 8px;
-    grid-column: 1 / -1;
-  }
-  .empty-state code { color: var(--meteoCyan); font-size: 0.85rem; }
-</style>
+    .session-btn {
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 5px;
+      background: transparent;
+      color: var(--textDim);
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .session-btn:hover {
+      background: rgba(69, 123, 157, 0.12);
+      color: var(--text);
+    }
+
+    .session-btn.active {
+      background: rgba(69, 123, 157, 0.25);
+      color: var(--text);
+      border-color: var(--meteoCyan);
+    }
+
+    /* Model toggle */
+    .model-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .model-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .model-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .model-row input[type=checkbox] {
+      accent-color: var(--meteoCyan);
+      width: 14px;
+      height: 14px;
+    }
+
+    .model-row .dot {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .model-row.gru .dot {
+      background: var(--meteoCyan);
+    }
+
+    .model-row.moe .dot {
+      background: var(--meteoGreen);
+    }
+
+    .model-row.gru {
+      color: var(--meteoCyan);
+    }
+
+    .model-row.moe {
+      color: var(--meteoGreen);
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .btn-play {
+      background: var(--meteoCyan);
+      color: white;
+      min-width: 90px;
+    }
+
+    .btn-play:hover {
+      background: #5a99b8;
+    }
+
+    .btn-play.playing {
+      background: var(--meteoOrange);
+    }
+
+    .btn-reset {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--textDim);
+    }
+
+    .btn-reset:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    .speed-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .speed-row label {
+      font-size: 0.7rem;
+      color: var(--textDim);
+      white-space: nowrap;
+    }
+
+    .speed-row input[type=range] {
+      flex: 1;
+      accent-color: var(--meteoCyan);
+    }
+
+    .speed-row span {
+      font-size: 0.75rem;
+      color: var(--textDim);
+      min-width: 24px;
+    }
+
+    .content {
+      padding: 16px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .metric-card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-card .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--textDim);
+      margin-bottom: 2px;
+    }
+
+    .metric-card .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .metric-card .unit {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--textDim);
+    }
+
+    .metric-card .sub {
+      font-size: 0.7rem;
+      color: var(--textDim);
+      margin-top: 1px;
+    }
+
+    .val-gru {
+      color: var(--meteoCyan);
+    }
+
+    .val-moe {
+      color: var(--meteoGreen);
+    }
+
+    .val-true {
+      color: var(--meteoSky);
+    }
+
+    .val-unc {
+      color: var(--meteoOrange);
+    }
+
+    .val-events {
+      color: var(--meteoRed);
+    }
+
+    /* 2-column layout for chart and map */
+    .visuals-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .panel-header h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--textDim);
+    }
+
+    .panel-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.68rem;
+      color: var(--textDim);
+      flex-wrap: wrap;
+    }
+
+    .panel-legend span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .panel-legend .dot {
+      width: 14px;
+      height: 3px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    /* Colorbar for map */
+    .colorbar {
+      width: 60px;
+      height: 6px;
+      border-radius: 3px;
+      display: inline-block;
+      background: linear-gradient(90deg, #1D3557, #457B9D, #A8DADC, #F4A261, #E63946);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .timeline-container {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .timeline-header h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--textDim);
+    }
+
+    .timeline-time {
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--meteoCyan);
+    }
+
+    .timeline-bar {
+      position: relative;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .timeline-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(29, 53, 87, 0.6), rgba(69, 123, 157, 0.4));
+      border-radius: 5px;
+    }
+
+    /* Zone post-alerte (baseline) */
+    .timeline-baseline-zone {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(230, 57, 70, 0.07);
+      border-left: 1px solid rgba(230, 57, 70, 0.3);
+      pointer-events: none;
+    }
+
+    .timeline-event {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      border-radius: 1px;
+    }
+
+    .timeline-event.cg {
+      background: var(--meteoRed);
+      height: 22px;
+      opacity: 0.8;
+    }
+
+    .timeline-event.ic {
+      background: var(--meteoSky);
+      height: 12px;
+      opacity: 0.35;
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--textDim);
+      font-size: 1rem;
+      flex-direction: column;
+      gap: 8px;
+      grid-column: 1 / -1;
+    }
+
+    .empty-state code {
+      color: var(--meteoCyan);
+      font-size: 0.85rem;
+    }
+  </style>
 </head>
+
 <body>
 
-<header>
-  <div><h1>Météorage <span>— Replay interactif</span></h1></div>
-  <div class="subtitle">Phase 2ter · GRU Gaussian vs MoE Spatial · Prédiction de fin d'orage</div>
-</header>
+  <header>
+    <div>
+      <h1>Météorage <span>— Replay interactif</span></h1>
+    </div>
+    <div class="subtitle">Phase 2ter · GRU Gaussian vs MoE Spatial · Prédiction de fin d'orage</div>
+  </header>
 
-<div class="main">
-  <aside class="sidebar">
-    <div>
-      <h2>Aéroport</h2>
-      <div id="airport-list" class="airport-grid"></div>
-    </div>
-    <div>
-      <h2>Session</h2>
-      <div id="session-list" class="session-list"></div>
-    </div>
-    <div>
-      <h2>Modèles affichés</h2>
-      <div class="model-toggle">
-        <label class="model-row gru">
-          <input type="checkbox" id="show-gru" checked>
-          <div class="dot"></div>
-          GRU Gaussian (Phase 2bis)
-        </label>
-        <label class="model-row moe">
-          <input type="checkbox" id="show-moe" checked>
-          <div class="dot"></div>
-          MoE Spatial (Phase 2ter)
-        </label>
+  <div class="main">
+    <aside class="sidebar">
+      <div>
+        <h2>Aéroport</h2>
+        <div id="airport-list" class="airport-grid"></div>
       </div>
-    </div>
-    <div>
-      <h2>Contrôles</h2>
-      <div class="controls">
-        <button class="btn btn-play" id="btn-play" onclick="togglePlay()">▶ Play</button>
-        <button class="btn btn-reset" onclick="resetSession()">↺ Reset</button>
+      <div>
+        <h2>Session</h2>
+        <div id="session-list" class="session-list"></div>
       </div>
-      <div class="speed-row" style="margin-top:6px">
-        <label>Vitesse :</label>
-        <input type="range" id="speed" min="0" max="9" value="6">
-        <span id="speed-label">×10</span>
-      </div>
-    </div>
-  </aside>
-
-  <div class="content">
-    <div class="metrics">
-      <div class="metric-card">
-        <div class="label">GRU — Prédiction</div>
-        <div class="value val-gru" id="m-gru">—</div>
-        <div class="sub" id="m-gru-sub">&nbsp;</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">MoE — Prédiction</div>
-        <div class="value val-moe" id="m-moe">—</div>
-        <div class="sub" id="m-moe-sub">&nbsp;</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Temps réel restant</div>
-        <div class="value val-true" id="m-true">—</div>
-        <div class="sub">&nbsp;</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Incertitude GRU (±σ)</div>
-        <div class="value val-unc" id="m-unc">—</div>
-        <div class="sub" id="m-unc-sub">&nbsp;</div>
-      </div>
-      <div class="metric-card">
-        <div class="label">Éclairs observés</div>
-        <div class="value val-events" id="m-events">—</div>
-        <div class="sub" id="m-events-sub">&nbsp;</div>
-      </div>
-    </div>
-
-    <div class="visuals-grid">
-      <!-- Chart Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Temps restant prédit vs réel</h3>
-          <div class="panel-legend">
-            <span><div class="dot" style="background:var(--meteoCyan)"></div> GRU</span>
-            <span><div class="dot" style="background:var(--meteoGreen)"></div> MoE Spatial</span>
-            <span><div class="dot" style="background:var(--meteoSky);opacity:0.6"></div> Réalité</span>
-            <span><div class="dot" style="background:rgba(255,255,255,0.2)"></div> Baseline</span>
-            <span style="color:var(--meteoRed);opacity:0.7">| Dernier éclair</span>
-          </div>
+      <div>
+        <h2>Modèles affichés</h2>
+        <div class="model-toggle">
+          <label class="model-row gru">
+            <input type="checkbox" id="show-gru" checked>
+            <div class="dot"></div>
+            GRU Gaussian (Phase 2bis)
+          </label>
+          <label class="model-row moe">
+            <input type="checkbox" id="show-moe" checked>
+            <div class="dot"></div>
+            MoE Spatial (Phase 2ter)
+          </label>
         </div>
-        <canvas id="chart"></canvas>
       </div>
-
-      <!-- Map Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h3>Carte des éclairs</h3>
-          <div class="panel-legend">
-            <span>Ancien <div class="colorbar"></div> Récent</span>
-            <span style="color:var(--meteoRed)">○ 5 km</span>
-          </div>
+      <div>
+        <h2>Contrôles</h2>
+        <div class="controls">
+          <button class="btn btn-play" id="btn-play" onclick="togglePlay()">▶ Play</button>
+          <button class="btn btn-reset" onclick="resetSession()">↺ Reset</button>
         </div>
-        <canvas id="map"></canvas>
+        <div class="speed-row" style="margin-top:6px">
+          <label>Vitesse :</label>
+          <input type="range" id="speed" min="0" max="9" value="6">
+          <span id="speed-label">×10</span>
+        </div>
       </div>
-    </div>
+    </aside>
 
-    <div class="timeline-container">
-      <div class="timeline-header">
-        <h3>Timeline de la session</h3>
-        <span class="timeline-time" id="tl-time">0.0 / — min</span>
+    <div class="content">
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="label">GRU — Prédiction</div>
+          <div class="value val-gru" id="m-gru">—</div>
+          <div class="sub" id="m-gru-sub">&nbsp;</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">MoE — Prédiction</div>
+          <div class="value val-moe" id="m-moe">—</div>
+          <div class="sub" id="m-moe-sub">&nbsp;</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Temps réel restant</div>
+          <div class="value val-true" id="m-true">—</div>
+          <div class="sub">&nbsp;</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Incertitude GRU (±σ)</div>
+          <div class="value val-unc" id="m-unc">—</div>
+          <div class="sub" id="m-unc-sub">&nbsp;</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Éclairs observés</div>
+          <div class="value val-events" id="m-events">—</div>
+          <div class="sub" id="m-events-sub">&nbsp;</div>
+        </div>
       </div>
-      <div class="timeline-bar" id="timeline" onclick="seekTimeline(event)">
-        <div class="timeline-progress" id="timeline-progress"></div>
-        <div class="timeline-baseline-zone" id="baseline-zone"></div>
+
+      <div class="visuals-grid">
+        <!-- Chart Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Temps restant prédit vs réel</h3>
+            <div class="panel-legend">
+              <span>
+                <div class="dot" style="background:var(--meteoCyan)"></div> GRU
+              </span>
+              <span>
+                <div class="dot" style="background:var(--meteoGreen)"></div> MoE Spatial
+              </span>
+              <span>
+                <div class="dot" style="background:var(--meteoSky);opacity:0.6"></div> Réalité
+              </span>
+              <span>
+                <div class="dot" style="background:rgba(255,255,255,0.2)"></div> Baseline
+              </span>
+              <span style="color:var(--meteoRed);opacity:0.7">| Dernier éclair</span>
+            </div>
+          </div>
+          <canvas id="chart"></canvas>
+        </div>
+
+        <!-- Map Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Carte des éclairs</h3>
+            <div class="panel-legend">
+              <span>Ancien <div class="colorbar"></div> Récent</span>
+              <span style="color:var(--meteoRed)">○ 5 km</span>
+            </div>
+          </div>
+          <canvas id="map"></canvas>
+        </div>
+      </div>
+
+      <div class="timeline-container">
+        <div class="timeline-header">
+          <h3>Timeline de la session</h3>
+          <span class="timeline-time" id="tl-time">0.0 / — min</span>
+        </div>
+        <div class="timeline-bar" id="timeline" onclick="seekTimeline(event)">
+          <div class="timeline-progress" id="timeline-progress"></div>
+          <div class="timeline-baseline-zone" id="baseline-zone"></div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-// ════════════════════════════════════════════════════
-//  State
-// ════════════════════════════════════════════════════
-let DATA = [];
-let currentSession = null;
-let playing = false;
-let animFrame = null;
+  <script>
+    // ----------------------------------------------------
+    //  State
+    // ----------------------------------------------------
+    let DATA = [];
+    let currentSession = null;
+    let playing = false;
+    let animFrame = null;
 
-let currentTime = 0;
-let lastRealMs = 0;
+    let currentTime = 0;
+    let lastRealMs = 0;
 
-const C = {
-  gru: '#457B9D', moe: '#52B788',
-  true_: '#A8DADC', unc: '#E07A5F',
-  cg: '#E63946', ic: '#A8DADC',
-  baseline: 'rgba(255,255,255,0.18)',
-  grid: 'rgba(255,255,255,0.06)', gridText: 'rgba(255,255,255,0.22)',
-  alertEnd: 'rgba(230,57,70,0.4)',
-};
+    const C = {
+      gru: '#457B9D', moe: '#52B788',
+      true_: '#A8DADC', unc: '#E07A5F',
+      cg: '#E63946', ic: '#A8DADC',
+      baseline: 'rgba(255,255,255,0.18)',
+      grid: 'rgba(255,255,255,0.06)', gridText: 'rgba(255,255,255,0.22)',
+      alertEnd: 'rgba(230,57,70,0.4)',
+    };
 
-// Heatmap colors from dark blue (old) to bright red (new)
-const mapPalette = [
-  '#1D3557', '#2A4D6E', '#3E6685', '#457B9D',
-  '#6BA3BA', '#A8DADC', '#F1FAEE', '#F4E285',
-  '#F4A261', '#E76F51', '#E63946'
-];
+    // Heatmap colors from dark blue (old) to bright red (new)
+    const mapPalette = [
+      '#1D3557', '#2A4D6E', '#3E6685', '#457B9D',
+      '#6BA3BA', '#A8DADC', '#F1FAEE', '#F4E285',
+      '#F4A261', '#E76F51', '#E63946'
+    ];
 
-function getEventColor(time) {
-  if (time > currentTime) return 'transparent';
-  const age = currentTime - time;
-  const maxAge = Math.max(20, currentTime);
-  const ratio = Math.max(0, 1 - (age / maxAge));
-  const idx = Math.min(mapPalette.length - 1, Math.floor(ratio * mapPalette.length));
-  return mapPalette[idx];
-}
+    function getEventColor(time) {
+      if (time > currentTime) return 'transparent';
+      const age = currentTime - time;
+      const maxAge = Math.max(20, currentTime);
+      const ratio = Math.max(0, 1 - (age / maxAge));
+      const idx = Math.min(mapPalette.length - 1, Math.floor(ratio * mapPalette.length));
+      return mapPalette[idx];
+    }
 
-function showGRU() { return document.getElementById('show-gru').checked; }
-function showMoE() { return document.getElementById('show-moe').checked; }
+    function showGRU() { return document.getElementById('show-gru').checked; }
+    function showMoE() { return document.getElementById('show-moe').checked; }
 
-// ════════════════════════════════════════════════════
-//  Data loading
-// ════════════════════════════════════════════════════
-fetch('demo_sessions.json')
-  .then(r => r.json())
-  .then(data => {
-    // Normalize: support both old JSON (predictions/uncertainties) and new (predictions_gru/uncertainties_gru)
-    data.forEach(s => {
-      if (!s.predictions_gru) s.predictions_gru = s.predictions || [];
-      if (!s.uncertainties_gru) s.uncertainties_gru = s.uncertainties || [];
-      if (!s.predictions_moe) s.predictions_moe = [];
-      if (!s.uncertainties_moe) s.uncertainties_moe = [];
-      if (!s.timeline_end) s.timeline_end = (s.events[s.events.length - 1]?.time || 0) + 30;
-      if (!s.last_cg_time) s.last_cg_time = s.duration_min || 0;
+    // ----------------------------------------------------
+    //  Data loading
+    // ----------------------------------------------------
+    fetch('demo_sessions.json')
+      .then(r => r.json())
+      .then(data => {
+        // Normalize: support both old JSON (predictions/uncertainties) and new (predictions_gru/uncertainties_gru)
+        data.forEach(s => {
+          if (!s.predictions_gru) s.predictions_gru = s.predictions || [];
+          if (!s.uncertainties_gru) s.uncertainties_gru = s.uncertainties || [];
+          if (!s.predictions_moe) s.predictions_moe = [];
+          if (!s.uncertainties_moe) s.uncertainties_moe = [];
+          if (!s.timeline_end) s.timeline_end = (s.events[s.events.length - 1]?.time || 0) + 30;
+          if (!s.last_cg_time) s.last_cg_time = s.duration_min || 0;
+        });
+        DATA = data; buildUI();
+      })
+      .catch(() => {
+        document.querySelector('.visuals-grid').innerHTML =
+          '<div class="empty-state">Fichier demo_sessions.json non trouvé<br><code>> python scripts/export_demo_sessions.py</code></div>';
+      });
+
+    function buildUI() {
+      const airports = [...new Set(DATA.map(s => s.airport))].sort();
+      const list = document.getElementById('airport-list');
+      airports.forEach((ap, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'airport-btn' + (i === 0 ? ' active' : '');
+        btn.textContent = ap;
+        btn.onclick = () => selectAirport(ap);
+        list.appendChild(btn);
+      });
+      selectAirport(airports[0]);
+    }
+
+    function selectAirport(airport) {
+      stop();
+      document.querySelectorAll('.airport-btn').forEach(b =>
+        b.classList.toggle('active', b.textContent === airport));
+      const sessions = DATA.filter(s => s.airport === airport);
+      const list = document.getElementById('session-list');
+      list.innerHTML = '';
+      sessions.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'session-btn' + (i === 0 ? ' active' : '');
+        btn.innerHTML = `Session ${i + 1} · <b>${s.n_events}</b> éclairs · ${s.duration_min} min`;
+        btn.onclick = () => loadSession(s, btn);
+        list.appendChild(btn);
+      });
+      if (sessions.length) loadSession(sessions[0], list.querySelector('.session-btn'));
+    }
+
+    function loadSession(s, btn) {
+      stop();
+      document.querySelectorAll('.session-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      currentSession = s;
+      currentTime = 0;
+      buildTimeline();
+      render();
+    }
+
+    // ----------------------------------------------------
+    //  Helpers
+    // ----------------------------------------------------
+    function getTimelineEnd(s) {
+      // Use timeline_end if present, else last event time + 30min
+      return s.timeline_end || (s.events[s.events.length - 1].time + 30);
+    }
+
+    function getEventTimes(s) { return s.events.slice(1).map(e => e.time); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function timeToIndex(s, t) {
+      const times = getEventTimes(s);
+      if (t <= times[0]) return { idx: 0, frac: 0 };
+      for (let i = 1; i < times.length; i++) {
+        if (t <= times[i]) {
+          const f = (t - times[i - 1]) / (times[i] - times[i - 1]);
+          return { idx: i - 1, frac: f };
+        }
+      }
+      return { idx: times.length - 1, frac: 0 };
+    }
+
+    function interpModel(s, t, predKey, uncKey) {
+      const preds = s[predKey];
+      const uncs = s[uncKey];
+      const trues = s.true_remaining;
+      if (!preds) return { pred: null, unc: null, real: null };
+      const { idx, frac } = timeToIndex(s, t);
+      const n = preds.length;
+      const i0 = Math.min(idx, n - 1);
+      const i1 = Math.min(idx + 1, n - 1);
+      return {
+        pred: lerp(preds[i0], preds[i1], frac),
+        unc: lerp(uncs[i0], uncs[i1], frac),
+        real: lerp(trues[i0], trues[i1], frac),
+      };
+    }
+
+    function interpAt(s, t) {
+      return interpModel(s, t, 'predictions_gru', 'uncertainties_gru');
+    }
+
+    function eventsUpTo(s, t) {
+      let count = 0, lastCG = false;
+      for (const ev of s.events) {
+        if (ev.time <= t) { count++; lastCG = ev.is_cg; }
+      }
+      return { count, lastCG };
+    }
+
+    // ----------------------------------------------------
+    //  Timeline
+    // ----------------------------------------------------
+    function buildTimeline() {
+      const tl = document.getElementById('timeline');
+      tl.querySelectorAll('.timeline-event').forEach(e => e.remove());
+      const s = currentSession;
+      const maxT = getTimelineEnd(s);
+      const lastCG = s.last_cg_time || s.duration_min;
+
+      // Baseline zone: from last CG to end
+      const bz = document.getElementById('baseline-zone');
+      const leftPct = (lastCG / maxT * 100).toFixed(2);
+      const widthPct = ((maxT - lastCG) / maxT * 100).toFixed(2);
+      bz.style.left = leftPct + '%';
+      bz.style.width = widthPct + '%';
+
+      s.events.forEach(ev => {
+        const m = document.createElement('div');
+        m.className = 'timeline-event ' + (ev.is_cg ? 'cg' : 'ic');
+        m.style.left = (ev.time / maxT * 100) + '%';
+        tl.appendChild(m);
+      });
+    }
+
+    function seekTimeline(e) {
+      if (!currentSession) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      currentTime = frac * getTimelineEnd(currentSession);
+      render();
+    }
+
+    // ----------------------------------------------------
+    //  Playback
+    // ----------------------------------------------------
+    const SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 10, 15, 30, 60];
+
+    function togglePlay() { playing ? stop() : play(); }
+
+    function play() {
+      if (!currentSession) return;
+      const maxT = getTimelineEnd(currentSession);
+      if (currentTime >= maxT - 0.1) currentTime = 0;
+      playing = true;
+      const btn = document.getElementById('btn-play');
+      btn.textContent = '⏸ Pause'; btn.classList.add('playing');
+      lastRealMs = performance.now();
+      tick();
+    }
+
+    function stop() {
+      playing = false;
+      const btn = document.getElementById('btn-play');
+      btn.textContent = '▶ Play'; btn.classList.remove('playing');
+      if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    }
+
+    function resetSession() { stop(); currentTime = 0; render(); }
+
+    function tick() {
+      if (!playing || !currentSession) return;
+      const now = performance.now();
+      const dtReal = (now - lastRealMs) / 1000;
+      lastRealMs = now;
+
+      const speedIdx = parseInt(document.getElementById('speed').value);
+      const speed = SPEEDS[speedIdx];
+      currentTime += dtReal * speed;
+
+      const maxT = getTimelineEnd(currentSession);
+      if (currentTime >= maxT) {
+        currentTime = maxT;
+        render(); stop(); return;
+      }
+      render();
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    document.getElementById('speed').addEventListener('input', function () {
+      document.getElementById('speed-label').textContent = '×' + SPEEDS[this.value];
     });
-    DATA = data; buildUI();
-  })
-  .catch(() => {
-    document.querySelector('.visuals-grid').innerHTML =
-      '<div class="empty-state">Fichier demo_sessions.json non trouvé<br><code>pew in orage python scripts/export_demo_sessions.py</code></div>';
-  });
 
-function buildUI() {
-  const airports = [...new Set(DATA.map(s => s.airport))].sort();
-  const list = document.getElementById('airport-list');
-  airports.forEach((ap, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'airport-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = ap;
-    btn.onclick = () => selectAirport(ap);
-    list.appendChild(btn);
-  });
-  selectAirport(airports[0]);
-}
+    document.getElementById('show-gru').addEventListener('change', () => { if (currentSession) render(); });
+    document.getElementById('show-moe').addEventListener('change', () => { if (currentSession) render(); });
 
-function selectAirport(airport) {
-  stop();
-  document.querySelectorAll('.airport-btn').forEach(b =>
-    b.classList.toggle('active', b.textContent === airport));
-  const sessions = DATA.filter(s => s.airport === airport);
-  const list = document.getElementById('session-list');
-  list.innerHTML = '';
-  sessions.forEach((s, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'session-btn' + (i === 0 ? ' active' : '');
-    btn.innerHTML = `Session ${i+1} · <b>${s.n_events}</b> éclairs · ${s.duration_min} min`;
-    btn.onclick = () => loadSession(s, btn);
-    list.appendChild(btn);
-  });
-  if (sessions.length) loadSession(sessions[0], list.querySelector('.session-btn'));
-}
+    // ----------------------------------------------------
+    //  Keyboard Controls
+    // ----------------------------------------------------
+    window.addEventListener('keydown', (e) => {
+      if (!currentSession) return;
+      const maxT = getTimelineEnd(currentSession);
+      const speedInput = document.getElementById('speed');
+      const speedIdx = parseInt(speedInput.value);
+      const speed = SPEEDS[speedIdx];
+      const skipAmount = Math.max(1, speed / 5);
 
-function loadSession(s, btn) {
-  stop();
-  document.querySelectorAll('.session-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  currentSession = s;
-  currentTime = 0;
-  buildTimeline();
-  render();
-}
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault(); stop();
+        currentTime = Math.min(maxT, currentTime + skipAmount); render();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault(); stop();
+        currentTime = Math.max(0, currentTime - skipAmount); render();
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        if (speedIdx < SPEEDS.length - 1) {
+          speedInput.value = speedIdx + 1;
+          speedInput.dispatchEvent(new Event('input'));
+        }
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        if (speedIdx > 0) {
+          speedInput.value = speedIdx - 1;
+          speedInput.dispatchEvent(new Event('input'));
+        }
+      }
+    });
 
-// ════════════════════════════════════════════════════
-//  Helpers
-// ════════════════════════════════════════════════════
-function getTimelineEnd(s) {
-  // Use timeline_end if present, else last event time + 30min
-  return s.timeline_end || (s.events[s.events.length - 1].time + 30);
-}
-
-function getEventTimes(s) { return s.events.slice(1).map(e => e.time); }
-function lerp(a, b, t) { return a + (b - a) * t; }
-
-function timeToIndex(s, t) {
-  const times = getEventTimes(s);
-  if (t <= times[0]) return { idx: 0, frac: 0 };
-  for (let i = 1; i < times.length; i++) {
-    if (t <= times[i]) {
-      const f = (t - times[i-1]) / (times[i] - times[i-1]);
-      return { idx: i - 1, frac: f };
+    // ----------------------------------------------------
+    //  Render
+    // ----------------------------------------------------
+    function render() {
+      updateMetrics();
+      drawChart();
+      drawMap();
+      updateTimeline();
     }
-  }
-  return { idx: times.length - 1, frac: 0 };
-}
 
-function interpModel(s, t, predKey, uncKey) {
-  const preds = s[predKey];
-  const uncs = s[uncKey];
-  const trues = s.true_remaining;
-  if (!preds) return { pred: null, unc: null, real: null };
-  const { idx, frac } = timeToIndex(s, t);
-  const n = preds.length;
-  const i0 = Math.min(idx, n - 1);
-  const i1 = Math.min(idx + 1, n - 1);
-  return {
-    pred: lerp(preds[i0], preds[i1], frac),
-    unc: lerp(uncs[i0], uncs[i1], frac),
-    real: lerp(trues[i0], trues[i1], frac),
-  };
-}
-
-function interpAt(s, t) {
-  return interpModel(s, t, 'predictions_gru', 'uncertainties_gru');
-}
-
-function eventsUpTo(s, t) {
-  let count = 0, lastCG = false;
-  for (const ev of s.events) {
-    if (ev.time <= t) { count++; lastCG = ev.is_cg; }
-  }
-  return { count, lastCG };
-}
-
-// ════════════════════════════════════════════════════
-//  Timeline
-// ════════════════════════════════════════════════════
-function buildTimeline() {
-  const tl = document.getElementById('timeline');
-  tl.querySelectorAll('.timeline-event').forEach(e => e.remove());
-  const s = currentSession;
-  const maxT = getTimelineEnd(s);
-  const lastCG = s.last_cg_time || s.duration_min;
-
-  // Baseline zone: from last CG to end
-  const bz = document.getElementById('baseline-zone');
-  const leftPct = (lastCG / maxT * 100).toFixed(2);
-  const widthPct = ((maxT - lastCG) / maxT * 100).toFixed(2);
-  bz.style.left = leftPct + '%';
-  bz.style.width = widthPct + '%';
-
-  s.events.forEach(ev => {
-    const m = document.createElement('div');
-    m.className = 'timeline-event ' + (ev.is_cg ? 'cg' : 'ic');
-    m.style.left = (ev.time / maxT * 100) + '%';
-    tl.appendChild(m);
-  });
-}
-
-function seekTimeline(e) {
-  if (!currentSession) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  currentTime = frac * getTimelineEnd(currentSession);
-  render();
-}
-
-// ════════════════════════════════════════════════════
-//  Playback
-// ════════════════════════════════════════════════════
-const SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 10, 15, 30, 60];
-
-function togglePlay() { playing ? stop() : play(); }
-
-function play() {
-  if (!currentSession) return;
-  const maxT = getTimelineEnd(currentSession);
-  if (currentTime >= maxT - 0.1) currentTime = 0;
-  playing = true;
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '⏸ Pause'; btn.classList.add('playing');
-  lastRealMs = performance.now();
-  tick();
-}
-
-function stop() {
-  playing = false;
-  const btn = document.getElementById('btn-play');
-  btn.textContent = '▶ Play'; btn.classList.remove('playing');
-  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-}
-
-function resetSession() { stop(); currentTime = 0; render(); }
-
-function tick() {
-  if (!playing || !currentSession) return;
-  const now = performance.now();
-  const dtReal = (now - lastRealMs) / 1000;
-  lastRealMs = now;
-
-  const speedIdx = parseInt(document.getElementById('speed').value);
-  const speed = SPEEDS[speedIdx];
-  currentTime += dtReal * speed;
-
-  const maxT = getTimelineEnd(currentSession);
-  if (currentTime >= maxT) {
-    currentTime = maxT;
-    render(); stop(); return;
-  }
-  render();
-  animFrame = requestAnimationFrame(tick);
-}
-
-document.getElementById('speed').addEventListener('input', function() {
-  document.getElementById('speed-label').textContent = '×' + SPEEDS[this.value];
-});
-
-document.getElementById('show-gru').addEventListener('change', () => { if (currentSession) render(); });
-document.getElementById('show-moe').addEventListener('change', () => { if (currentSession) render(); });
-
-// ════════════════════════════════════════════════════
-//  Keyboard Controls
-// ════════════════════════════════════════════════════
-window.addEventListener('keydown', (e) => {
-  if (!currentSession) return;
-  const maxT = getTimelineEnd(currentSession);
-  const speedInput = document.getElementById('speed');
-  const speedIdx = parseInt(speedInput.value);
-  const speed = SPEEDS[speedIdx];
-  const skipAmount = Math.max(1, speed / 5);
-
-  if (e.code === 'Space') {
-    e.preventDefault();
-    togglePlay();
-  } else if (e.code === 'ArrowRight') {
-    e.preventDefault(); stop();
-    currentTime = Math.min(maxT, currentTime + skipAmount); render();
-  } else if (e.code === 'ArrowLeft') {
-    e.preventDefault(); stop();
-    currentTime = Math.max(0, currentTime - skipAmount); render();
-  } else if (e.code === 'ArrowUp') {
-    e.preventDefault();
-    if (speedIdx < SPEEDS.length - 1) {
-      speedInput.value = speedIdx + 1;
-      speedInput.dispatchEvent(new Event('input'));
+    function updateTimeline() {
+      const s = currentSession;
+      if (!s) return;
+      const maxT = getTimelineEnd(s);
+      const frac = currentTime / maxT;
+      document.getElementById('timeline-progress').style.width = (Math.min(frac, 1) * 100) + '%';
+      document.getElementById('tl-time').textContent =
+        currentTime.toFixed(1) + ' / ' + maxT.toFixed(1) + ' min';
     }
-  } else if (e.code === 'ArrowDown') {
-    e.preventDefault();
-    if (speedIdx > 0) {
-      speedInput.value = speedIdx - 1;
-      speedInput.dispatchEvent(new Event('input'));
+
+    function updateMetrics() {
+      const s = currentSession;
+      if (!s) return;
+
+      const times = getEventTimes(s);
+      const t = Math.max(currentTime, times[0] || 0);
+
+      // In the post-alert zone: clamp to last prediction
+      const lastT = times[times.length - 1];
+      const tClamped = Math.min(t, lastT);
+
+      const gruData = interpModel(s, tClamped, 'predictions_gru', 'uncertainties_gru');
+      const moeData = s.predictions_moe
+        ? interpModel(s, tClamped, 'predictions_moe', 'uncertainties_moe')
+        : { pred: null };
+
+      const real = gruData.real !== null ? gruData.real : 0;
+
+      if (gruData.pred !== null) {
+        document.getElementById('m-gru').innerHTML = gruData.pred.toFixed(1) + ' <span class="unit">min</span>';
+        document.getElementById('m-gru-sub').textContent = 'Erreur : ' + Math.abs(gruData.pred - real).toFixed(1) + ' min';
+      }
+      if (moeData.pred !== null) {
+        document.getElementById('m-moe').innerHTML = moeData.pred.toFixed(1) + ' <span class="unit">min</span>';
+        document.getElementById('m-moe-sub').textContent = 'Erreur : ' + Math.abs(moeData.pred - real).toFixed(1) + ' min';
+      }
+      document.getElementById('m-true').innerHTML = real.toFixed(1) + ' <span class="unit">min</span>';
+
+      const unc = gruData.unc || 0;
+      document.getElementById('m-unc').innerHTML = '±' + unc.toFixed(1) + ' <span class="unit">min</span>';
+      const within = gruData.pred !== null && Math.abs(gruData.pred - real) <= unc;
+      const sub = document.getElementById('m-unc-sub');
+      sub.textContent = within ? "✓ dans l'intervalle" : '✗ hors intervalle';
+      sub.style.color = within ? '#52B788' : C.cg;
+
+      const ev = eventsUpTo(s, currentTime);
+      document.getElementById('m-events').innerHTML = ev.count + ' <span class="unit">/ ' + s.n_events + '</span>';
+      document.getElementById('m-events-sub').textContent = ev.lastCG ? '⚡ CG' : '☁ IC';
     }
-  }
-});
 
-// ════════════════════════════════════════════════════
-//  Render
-// ════════════════════════════════════════════════════
-function render() {
-  updateMetrics();
-  drawChart();
-  drawMap();
-  updateTimeline();
-}
+    // ----------------------------------------------------
+    //  Chart
+    // ----------------------------------------------------
+    function drawChart() {
+      const container = document.querySelectorAll('.panel')[0];
+      if (!container) return;
+      const canvas = document.getElementById('chart');
+      const w = container.clientWidth - 32;
+      const h = container.clientHeight - 46;
+      if (w < 100 || h < 80) return;
 
-function updateTimeline() {
-  const s = currentSession;
-  if (!s) return;
-  const maxT = getTimelineEnd(s);
-  const frac = currentTime / maxT;
-  document.getElementById('timeline-progress').style.width = (Math.min(frac, 1) * 100) + '%';
-  document.getElementById('tl-time').textContent =
-    currentTime.toFixed(1) + ' / ' + maxT.toFixed(1) + ' min';
-}
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
 
-function updateMetrics() {
-  const s = currentSession;
-  if (!s) return;
+      const s = currentSession;
+      if (!s || !s.predictions_gru || !s.predictions_gru.length) return;
 
-  const times = getEventTimes(s);
-  const t = Math.max(currentTime, times[0] || 0);
+      const margin = { top: 8, right: 16, bottom: 20, left: 40 };
+      const cw = w - margin.left - margin.right;
+      const ch = h - margin.top - margin.bottom;
 
-  // In the post-alert zone: clamp to last prediction
-  const lastT = times[times.length - 1];
-  const tClamped = Math.min(t, lastT);
+      const allEventTimes = getEventTimes(s);
+      const lastCG = s.last_cg_time || s.duration_min;
+      const maxT = getTimelineEnd(s);
 
-  const gruData = interpModel(s, tClamped, 'predictions_gru', 'uncertainties_gru');
-  const moeData = s.predictions_moe
-    ? interpModel(s, tClamped, 'predictions_moe', 'uncertainties_moe')
-    : { pred: null };
+      // Dynamic Y scale: include all predictions up to current time + uncertainty
+      let maxY = 30;
+      const allTimes = getEventTimes(s);
+      for (let i = 0; i < allTimes.length; i++) {
+        if (allTimes[i] <= currentTime) {
+          if (s.predictions_gru[i]) maxY = Math.max(maxY, s.predictions_gru[i] + (s.uncertainties_gru[i] || 0));
+          if (s.predictions_moe && s.predictions_moe[i]) maxY = Math.max(maxY, s.predictions_moe[i] + (s.uncertainties_moe[i] || 0));
+          if (s.true_remaining[i]) maxY = Math.max(maxY, s.true_remaining[i]);
+        }
+      }
+      maxY = Math.ceil(maxY * 1.1 / 10) * 10;
 
-  const real = gruData.real !== null ? gruData.real : 0;
+      const xScale = t => margin.left + (t / maxT) * cw;
+      const yScale = v => margin.top + ch - (Math.max(v, 0) / maxY) * ch;
 
-  if (gruData.pred !== null) {
-    document.getElementById('m-gru').innerHTML = gruData.pred.toFixed(1) + ' <span class="unit">min</span>';
-    document.getElementById('m-gru-sub').textContent = 'Erreur : ' + Math.abs(gruData.pred - real).toFixed(1) + ' min';
-  }
-  if (moeData.pred !== null) {
-    document.getElementById('m-moe').innerHTML = moeData.pred.toFixed(1) + ' <span class="unit">min</span>';
-    document.getElementById('m-moe-sub').textContent = 'Erreur : ' + Math.abs(moeData.pred - real).toFixed(1) + ' min';
-  }
-  document.getElementById('m-true').innerHTML = real.toFixed(1) + ' <span class="unit">min</span>';
+      // Grid
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+      ctx.font = '9px sans-serif'; ctx.fillStyle = C.gridText;
+      const nGridY = 4;
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= nGridY; i++) {
+        const v = (maxY / nGridY) * i;
+        const y = yScale(v);
+        ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+        ctx.fillText(Math.round(v) + '', margin.left - 5, y + 3);
+      }
+      ctx.textAlign = 'center';
+      const nGridX = 5;
+      for (let i = 0; i <= nGridX; i++) {
+        const t = (maxT / nGridX) * i;
+        const x = xScale(t);
+        ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, margin.top + ch); ctx.stroke();
+        ctx.fillText(Math.round(t) + ' min', x, h - margin.bottom + 12);
+      }
 
-  const unc = gruData.unc || 0;
-  document.getElementById('m-unc').innerHTML = '±' + unc.toFixed(1) + ' <span class="unit">min</span>';
-  const within = gruData.pred !== null && Math.abs(gruData.pred - real) <= unc;
-  const sub = document.getElementById('m-unc-sub');
-  sub.textContent = within ? "✓ dans l'intervalle" : '✗ hors intervalle';
-  sub.style.color = within ? '#52B788' : C.cg;
+      // Shaded post-alert zone (baseline window)
+      if (lastCG < maxT) {
+        ctx.fillStyle = 'rgba(230,57,70,0.06)';
+        ctx.fillRect(xScale(lastCG), margin.top, xScale(maxT) - xScale(lastCG), ch);
+      }
 
-  const ev = eventsUpTo(s, currentTime);
-  document.getElementById('m-events').innerHTML = ev.count + ' <span class="unit">/ ' + s.n_events + '</span>';
-  document.getElementById('m-events-sub').textContent = ev.lastCG ? '⚡ CG' : '☁ IC';
-}
+      // Vertical line at last CG (fin d'alerte)
+      if (lastCG <= currentTime) {
+        ctx.strokeStyle = C.alertEnd;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        const lcx = xScale(lastCG);
+        ctx.beginPath(); ctx.moveTo(lcx, margin.top); ctx.lineTo(lcx, margin.top + ch); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = C.alertEnd;
+        ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Dernier éclair', lcx, margin.top + 10);
+      }
 
-// ════════════════════════════════════════════════════
-//  Chart
-// ════════════════════════════════════════════════════
-function drawChart() {
-  const container = document.querySelectorAll('.panel')[0];
-  if (!container) return;
-  const canvas = document.getElementById('chart');
-  const w = container.clientWidth - 32;
-  const h = container.clientHeight - 46;
-  if (w < 100 || h < 80) return;
+      let lastDrawnIdx = -1;
+      for (let i = 0; i < allEventTimes.length; i++) {
+        if (allEventTimes[i] <= currentTime) lastDrawnIdx = i;
+      }
+      if (lastDrawnIdx < 0) {
+        const cx = xScale(currentTime);
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx, margin.top); ctx.lineTo(cx, margin.top + ch); ctx.stroke();
+        return;
+      }
 
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const s = currentSession;
-  if (!s || !s.predictions_gru || !s.predictions_gru.length) return;
-
-  const margin = { top: 8, right: 16, bottom: 20, left: 40 };
-  const cw = w - margin.left - margin.right;
-  const ch = h - margin.top - margin.bottom;
-
-  const allEventTimes = getEventTimes(s);
-  const lastCG = s.last_cg_time || s.duration_min;
-  const maxT = getTimelineEnd(s);
-
-  // Dynamic Y scale: include all predictions up to current time + uncertainty
-  let maxY = 30;
-  const allTimes = getEventTimes(s);
-  for (let i = 0; i < allTimes.length; i++) {
-    if (allTimes[i] <= currentTime) {
-      if (s.predictions_gru[i]) maxY = Math.max(maxY, s.predictions_gru[i] + (s.uncertainties_gru[i] || 0));
-      if (s.predictions_moe && s.predictions_moe[i]) maxY = Math.max(maxY, s.predictions_moe[i] + (s.uncertainties_moe[i] || 0));
-      if (s.true_remaining[i]) maxY = Math.max(maxY, s.true_remaining[i]);
-    }
-  }
-  maxY = Math.ceil(maxY * 1.1 / 10) * 10;
-
-  const xScale = t => margin.left + (t / maxT) * cw;
-  const yScale = v => margin.top + ch - (Math.max(v, 0) / maxY) * ch;
-
-  // Grid
-  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
-  ctx.font = '9px sans-serif'; ctx.fillStyle = C.gridText;
-  const nGridY = 4;
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= nGridY; i++) {
-    const v = (maxY / nGridY) * i;
-    const y = yScale(v);
-    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
-    ctx.fillText(Math.round(v) + '', margin.left - 5, y + 3);
-  }
-  ctx.textAlign = 'center';
-  const nGridX = 5;
-  for (let i = 0; i <= nGridX; i++) {
-    const t = (maxT / nGridX) * i;
-    const x = xScale(t);
-    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, margin.top + ch); ctx.stroke();
-    ctx.fillText(Math.round(t) + ' min', x, h - margin.bottom + 12);
-  }
-
-  // Shaded post-alert zone (baseline window)
-  if (lastCG < maxT) {
-    ctx.fillStyle = 'rgba(230,57,70,0.06)';
-    ctx.fillRect(xScale(lastCG), margin.top, xScale(maxT) - xScale(lastCG), ch);
-  }
-
-  // Vertical line at last CG (fin d'alerte)
-  if (lastCG <= currentTime) {
-    ctx.strokeStyle = C.alertEnd;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 3]);
-    const lcx = xScale(lastCG);
-    ctx.beginPath(); ctx.moveTo(lcx, margin.top); ctx.lineTo(lcx, margin.top + ch); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = C.alertEnd;
-    ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Dernier éclair', lcx, margin.top + 10);
-  }
-
-  let lastDrawnIdx = -1;
-  for (let i = 0; i < allEventTimes.length; i++) {
-    if (allEventTimes[i] <= currentTime) lastDrawnIdx = i;
-  }
-  if (lastDrawnIdx < 0) {
-    const cx = xScale(currentTime);
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(cx, margin.top); ctx.lineTo(cx, margin.top + ch); ctx.stroke();
-    return;
-  }
-
-  // Baseline
-  ctx.strokeStyle = C.baseline; ctx.lineWidth = 1.2;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  const tEnd = Math.min(currentTime, maxT);
-  const dt = maxT / 300;
-  let first = true;
-  // Baseline: in alert zone, countdown from last lightning. Post-alert: continues from 0.
-  for (let t = 0; t <= tEnd + dt / 2; t += dt) {
-    let lastEvTime = 0;
-    for (const ev of s.events) { if (ev.time <= t) lastEvTime = ev.time; else break; }
-    const baselinePred = Math.max(0, 30 - (t - lastEvTime));
-    const x = xScale(t), y = yScale(baselinePred);
-    if (first) { ctx.moveTo(x, y); first = false; } else { ctx.lineTo(x, y); }
-  }
-  ctx.stroke(); ctx.setLineDash([]);
-
-  // True remaining line
-  ctx.strokeStyle = C.true_; ctx.lineWidth = 1.5;
-  ctx.globalAlpha = 0.5; ctx.setLineDash([5, 3]);
-  ctx.beginPath();
-  for (let i = 0; i <= lastDrawnIdx; i++) {
-    const x = xScale(allEventTimes[i]), y = yScale(s.true_remaining[i]);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
-  // Smooth extension to currentTime (within alert zone)
-  if (currentTime > allEventTimes[lastDrawnIdx] && currentTime <= lastCG) {
-    const interp = interpModel(s, currentTime, 'predictions_gru', 'uncertainties_gru');
-    if (interp.real !== null) ctx.lineTo(xScale(currentTime), yScale(interp.real));
-  }
-  // True remaining in post-alert zone = 0
-  if (currentTime > lastCG) {
-    ctx.lineTo(xScale(lastCG), yScale(0));
-    ctx.lineTo(xScale(Math.min(currentTime, maxT)), yScale(0));
-  }
-  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-
-  // Helper: draw a prediction line with smooth extension to currentTime + post-alert decay
-  function drawPredLine(preds, uncs, color, dash, bandColor) {
-    if (!preds || !preds.length) return;
-    const finalPred = preds[preds.length - 1]; // prediction at T (last CG)
-    const clampedT = Math.min(currentTime, maxT);
-
-    // Uncertainty band (up to lastDrawnIdx)
-    if (bandColor) {
-      ctx.fillStyle = bandColor;
+      // Baseline
+      ctx.strokeStyle = C.baseline; ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.moveTo(xScale(allEventTimes[0]), yScale(preds[0] - uncs[0]));
-      for (let i = 1; i <= lastDrawnIdx; i++) ctx.lineTo(xScale(allEventTimes[i]), yScale(preds[i] - uncs[i]));
-      for (let i = lastDrawnIdx; i >= 0; i--) ctx.lineTo(xScale(allEventTimes[i]), yScale(preds[i] + uncs[i]));
-      ctx.closePath(); ctx.fill();
+      const tEnd = Math.min(currentTime, maxT);
+      const dt = maxT / 300;
+      let first = true;
+      // Baseline: in alert zone, countdown from last lightning. Post-alert: continues from 0.
+      for (let t = 0; t <= tEnd + dt / 2; t += dt) {
+        let lastEvTime = 0;
+        for (const ev of s.events) { if (ev.time <= t) lastEvTime = ev.time; else break; }
+        const baselinePred = Math.max(0, 30 - (t - lastEvTime));
+        const x = xScale(t), y = yScale(baselinePred);
+        if (first) { ctx.moveTo(x, y); first = false; } else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+
+      // True remaining line
+      ctx.strokeStyle = C.true_; ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5; ctx.setLineDash([5, 3]);
+      ctx.beginPath();
+      for (let i = 0; i <= lastDrawnIdx; i++) {
+        const x = xScale(allEventTimes[i]), y = yScale(s.true_remaining[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      // Smooth extension to currentTime (within alert zone)
+      if (currentTime > allEventTimes[lastDrawnIdx] && currentTime <= lastCG) {
+        const interp = interpModel(s, currentTime, 'predictions_gru', 'uncertainties_gru');
+        if (interp.real !== null) ctx.lineTo(xScale(currentTime), yScale(interp.real));
+      }
+      // True remaining in post-alert zone = 0
+      if (currentTime > lastCG) {
+        ctx.lineTo(xScale(lastCG), yScale(0));
+        ctx.lineTo(xScale(Math.min(currentTime, maxT)), yScale(0));
+      }
+      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+      // Helper: draw a prediction line with smooth extension to currentTime + post-alert decay
+      function drawPredLine(preds, uncs, color, dash, bandColor) {
+        if (!preds || !preds.length) return;
+        const finalPred = preds[preds.length - 1]; // prediction at T (last CG)
+        const clampedT = Math.min(currentTime, maxT);
+
+        // Uncertainty band (up to lastDrawnIdx)
+        if (bandColor) {
+          ctx.fillStyle = bandColor;
+          ctx.beginPath();
+          ctx.moveTo(xScale(allEventTimes[0]), yScale(preds[0] - uncs[0]));
+          for (let i = 1; i <= lastDrawnIdx; i++) ctx.lineTo(xScale(allEventTimes[i]), yScale(preds[i] - uncs[i]));
+          for (let i = lastDrawnIdx; i >= 0; i--) ctx.lineTo(xScale(allEventTimes[i]), yScale(preds[i] + uncs[i]));
+          ctx.closePath(); ctx.fill();
+        }
+
+        // Prediction line
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+        if (dash) ctx.setLineDash(dash);
+        ctx.beginPath();
+        for (let i = 0; i <= lastDrawnIdx; i++) {
+          const x = xScale(allEventTimes[i]), y = yScale(preds[i]);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        // Smooth extension to currentTime within alert zone
+        if (currentTime > allEventTimes[lastDrawnIdx] && currentTime < lastCG) {
+          // Interpolate toward next event's prediction
+          const nextIdx = Math.min(lastDrawnIdx + 1, preds.length - 1);
+          const t0 = allEventTimes[lastDrawnIdx], t1 = allEventTimes[Math.min(lastDrawnIdx + 1, allEventTimes.length - 1)];
+          const frac = t1 > t0 ? (currentTime - t0) / (t1 - t0) : 0;
+          const interpPred = preds[lastDrawnIdx] + (preds[nextIdx] - preds[lastDrawnIdx]) * Math.min(frac, 1);
+          ctx.lineTo(xScale(currentTime), yScale(interpPred));
+        }
+        // Post-alert zone: flat line at finalPred, decaying toward 0
+        if (currentTime >= lastCG) {
+          // Draw to lastCG using the final event's prediction
+          // finalPred decays to 0: at lastCG + finalPred minutes
+          const decayEnd = lastCG + Math.max(finalPred, 1);
+          const predAtCurrent = Math.max(0, finalPred - (clampedT - lastCG));
+          ctx.lineTo(xScale(lastCG), yScale(finalPred));
+          ctx.lineTo(xScale(Math.min(clampedT, decayEnd)), yScale(predAtCurrent));
+          if (clampedT > decayEnd) ctx.lineTo(xScale(clampedT), yScale(0));
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+
+      if (showGRU()) {
+        drawPredLine(s.predictions_gru, s.uncertainties_gru, C.gru, null, 'rgba(69,123,157,0.12)');
+      }
+      if (showMoE() && s.predictions_moe && s.predictions_moe.length) {
+        drawPredLine(s.predictions_moe, s.uncertainties_moe, C.moe, [6, 2], 'rgba(82,183,136,0.1)');
+      }
+
+      // Current time cursor — follows full timeline
+      const cx = xScale(Math.min(currentTime, maxT));
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx, margin.top); ctx.lineTo(cx, margin.top + ch); ctx.stroke();
+
+      // Cursor dots — in post-alert zone, show decaying prediction
+      const clampedForDot = Math.min(currentTime, allEventTimes[allEventTimes.length - 1]);
+
+      if (showGRU() && s.predictions_gru) {
+        const finalGRU = s.predictions_gru[s.predictions_gru.length - 1];
+        const predGRU = currentTime >= lastCG
+          ? Math.max(0, finalGRU - (currentTime - lastCG))
+          : interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_gru', 'uncertainties_gru').pred;
+        if (predGRU !== null) {
+          ctx.fillStyle = C.gru;
+          ctx.beginPath(); ctx.arc(cx, yScale(predGRU), 4.5, 0, 2 * Math.PI); ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+        }
+      }
+      if (showMoE() && s.predictions_moe && s.predictions_moe.length) {
+        const finalMoE = s.predictions_moe[s.predictions_moe.length - 1];
+        const predMoE = currentTime >= lastCG
+          ? Math.max(0, finalMoE - (currentTime - lastCG))
+          : interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_moe', 'uncertainties_moe').pred;
+        if (predMoE !== null) {
+          ctx.fillStyle = C.moe;
+          ctx.beginPath(); ctx.arc(cx, yScale(predMoE), 4.5, 0, 2 * Math.PI); ctx.fill();
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+        }
+      }
+      // True value dot
+      const trueVal = currentTime >= lastCG ? 0
+        : (interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_gru', 'uncertainties_gru').real ?? 0);
+      ctx.fillStyle = C.true_;
+      ctx.beginPath(); ctx.arc(cx, yScale(trueVal), 3.5, 0, 2 * Math.PI); ctx.fill();
+
+      // Lightning event markers along x axis
+      for (let i = 0; i < s.events.length; i++) {
+        const ev = s.events[i];
+        if (ev.time > currentTime) break;
+        const x = xScale(ev.time);
+        ctx.fillStyle = ev.is_cg ? C.cg : 'rgba(168,218,220,0.25)';
+        ctx.fillRect(x - 0.75, margin.top + ch - (ev.is_cg ? 6 : 3), 1.5, ev.is_cg ? 6 : 3);
+      }
     }
 
-    // Prediction line
-    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-    if (dash) ctx.setLineDash(dash);
-    ctx.beginPath();
-    for (let i = 0; i <= lastDrawnIdx; i++) {
-      const x = xScale(allEventTimes[i]), y = yScale(preds[i]);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    // ----------------------------------------------------
+    //  Map (Canvas 2D)
+    // ----------------------------------------------------
+    function drawMap() {
+      const container = document.querySelectorAll('.panel')[1];
+      if (!container) return;
+      const canvas = document.getElementById('map');
+      const w = container.clientWidth - 32;
+      const h = container.clientHeight - 46;
+      if (w < 50 || h < 50) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const s = currentSession;
+      if (!s || !s.events || s.events.length === 0 || !s.events[0].lat) {
+        ctx.fillStyle = C.gridText; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Aucune donnée spatiale', w / 2, h / 2);
+        return;
+      }
+
+      // Bounds
+      let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+      for (const ev of s.events) {
+        if (!ev.lat || !ev.lon) continue;
+        if (ev.lat < minLat) minLat = ev.lat;
+        if (ev.lat > maxLat) maxLat = ev.lat;
+        if (ev.lon < minLon) minLon = ev.lon;
+        if (ev.lon > maxLon) maxLon = ev.lon;
+      }
+      const padLat = Math.max(0.1, (maxLat - minLat) * 0.15);
+      const padLon = Math.max(0.1, (maxLon - minLon) * 0.15);
+      minLat -= padLat; maxLat += padLat;
+      minLon -= padLon; maxLon += padLon;
+
+      const midLatRad = ((minLat + maxLat) / 2) * Math.PI / 180;
+      const aspect_data = ((maxLon - minLon) * Math.cos(midLatRad)) / (maxLat - minLat);
+      const aspect_canvas = w / h;
+
+      if (aspect_canvas > aspect_data) {
+        const centerLon = (minLon + maxLon) / 2;
+        const newSpan = (maxLat - minLat) * aspect_canvas / Math.cos(midLatRad);
+        minLon = centerLon - newSpan / 2;
+        maxLon = centerLon + newSpan / 2;
+      } else {
+        const centerLat = (minLat + maxLat) / 2;
+        const newSpan = (maxLon - minLon) * Math.cos(midLatRad) / aspect_canvas;
+        minLat = centerLat - newSpan / 2;
+        maxLat = centerLat + newSpan / 2;
+      }
+
+      const projX = lon => ((lon - minLon) / (maxLon - minLon)) * w;
+      const projY = lat => h - ((lat - minLat) / (maxLat - minLat)) * h;
+
+      // Grid
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+      for (let i = 1; i <= 4; i++) {
+        ctx.beginPath(); ctx.moveTo(0, h * i / 5); ctx.lineTo(w, h * i / 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(w * i / 5, 0); ctx.lineTo(w * i / 5, h); ctx.stroke();
+      }
+
+      // Airport position (median of events)
+      const sortedLats = s.events.map(e => e.lat).filter(Boolean).sort((a, b) => a - b);
+      const sortedLons = s.events.map(e => e.lon).filter(Boolean).sort((a, b) => a - b);
+      const apLat = sortedLats[Math.floor(sortedLats.length / 2)];
+      const apLon = sortedLons[Math.floor(sortedLons.length / 2)];
+      const ax = projX(apLon), ay = projY(apLat);
+
+      // 5km circle — compute radius in pixels
+      // 1 degree lat ≈ 111 km, so 5km ≈ 5/111 degrees
+      const km5_deg_lat = 5.0 / 111.0;
+      const km5_px = (km5_deg_lat / (maxLat - minLat)) * h;
+
+      // Radar rings (50km reference)
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.beginPath(); ctx.arc(ax, ay, Math.min(w, h) / 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ax, ay, Math.min(w, h) / 2, 0, Math.PI * 2); ctx.stroke();
+
+      // 5km circle (highlighted)
+      ctx.strokeStyle = 'rgba(230,57,70,0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.arc(ax, ay, km5_px, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(230,57,70,0.5)'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('5 km', ax, ay - km5_px - 3);
+
+      // Draw events
+      const visibleEvents = s.events.filter(e => e.time <= currentTime);
+      for (const ev of visibleEvents) {
+        if (!ev.lat) continue;
+        const x = projX(ev.lon);
+        const y = projY(ev.lat);
+        let r = 2;
+        if (ev.amplitude) r = Math.min(6, Math.max(2, Math.abs(ev.amplitude) / 15));
+        if (ev.is_cg) r *= 1.5;
+
+        const color = getEventColor(ev.time);
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+
+        if (currentTime - ev.time < 0.5) {
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+      }
+
+      // Airport marker (on top)
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(ax, ay, 5, 0, 2 * Math.PI); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('✈', ax, ay + 3);
     }
-    // Smooth extension to currentTime within alert zone
-    if (currentTime > allEventTimes[lastDrawnIdx] && currentTime < lastCG) {
-      // Interpolate toward next event's prediction
-      const nextIdx = Math.min(lastDrawnIdx + 1, preds.length - 1);
-      const t0 = allEventTimes[lastDrawnIdx], t1 = allEventTimes[Math.min(lastDrawnIdx + 1, allEventTimes.length - 1)];
-      const frac = t1 > t0 ? (currentTime - t0) / (t1 - t0) : 0;
-      const interpPred = preds[lastDrawnIdx] + (preds[nextIdx] - preds[lastDrawnIdx]) * Math.min(frac, 1);
-      ctx.lineTo(xScale(currentTime), yScale(interpPred));
-    }
-    // Post-alert zone: flat line at finalPred, decaying toward 0
-    if (currentTime >= lastCG) {
-      // Draw to lastCG using the final event's prediction
-      // finalPred decays to 0: at lastCG + finalPred minutes
-      const decayEnd = lastCG + Math.max(finalPred, 1);
-      const predAtCurrent = Math.max(0, finalPred - (clampedT - lastCG));
-      ctx.lineTo(xScale(lastCG), yScale(finalPred));
-      ctx.lineTo(xScale(Math.min(clampedT, decayEnd)), yScale(predAtCurrent));
-      if (clampedT > decayEnd) ctx.lineTo(xScale(clampedT), yScale(0));
-    }
-    ctx.stroke(); ctx.setLineDash([]);
-  }
 
-  if (showGRU()) {
-    drawPredLine(s.predictions_gru, s.uncertainties_gru, C.gru, null, 'rgba(69,123,157,0.12)');
-  }
-  if (showMoE() && s.predictions_moe && s.predictions_moe.length) {
-    drawPredLine(s.predictions_moe, s.uncertainties_moe, C.moe, [6, 2], 'rgba(82,183,136,0.1)');
-  }
-
-  // Current time cursor — follows full timeline
-  const cx = xScale(Math.min(currentTime, maxT));
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx, margin.top); ctx.lineTo(cx, margin.top + ch); ctx.stroke();
-
-  // Cursor dots — in post-alert zone, show decaying prediction
-  const clampedForDot = Math.min(currentTime, allEventTimes[allEventTimes.length - 1]);
-
-  if (showGRU() && s.predictions_gru) {
-    const finalGRU = s.predictions_gru[s.predictions_gru.length - 1];
-    const predGRU = currentTime >= lastCG
-      ? Math.max(0, finalGRU - (currentTime - lastCG))
-      : interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_gru', 'uncertainties_gru').pred;
-    if (predGRU !== null) {
-      ctx.fillStyle = C.gru;
-      ctx.beginPath(); ctx.arc(cx, yScale(predGRU), 4.5, 0, 2 * Math.PI); ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
-    }
-  }
-  if (showMoE() && s.predictions_moe && s.predictions_moe.length) {
-    const finalMoE = s.predictions_moe[s.predictions_moe.length - 1];
-    const predMoE = currentTime >= lastCG
-      ? Math.max(0, finalMoE - (currentTime - lastCG))
-      : interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_moe', 'uncertainties_moe').pred;
-    if (predMoE !== null) {
-      ctx.fillStyle = C.moe;
-      ctx.beginPath(); ctx.arc(cx, yScale(predMoE), 4.5, 0, 2 * Math.PI); ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
-    }
-  }
-  // True value dot
-  const trueVal = currentTime >= lastCG ? 0
-    : (interpModel(s, Math.max(currentTime, allEventTimes[0]), 'predictions_gru', 'uncertainties_gru').real ?? 0);
-  ctx.fillStyle = C.true_;
-  ctx.beginPath(); ctx.arc(cx, yScale(trueVal), 3.5, 0, 2 * Math.PI); ctx.fill();
-
-  // Lightning event markers along x axis
-  for (let i = 0; i < s.events.length; i++) {
-    const ev = s.events[i];
-    if (ev.time > currentTime) break;
-    const x = xScale(ev.time);
-    ctx.fillStyle = ev.is_cg ? C.cg : 'rgba(168,218,220,0.25)';
-    ctx.fillRect(x - 0.75, margin.top + ch - (ev.is_cg ? 6 : 3), 1.5, ev.is_cg ? 6 : 3);
-  }
-}
-
-// ════════════════════════════════════════════════════
-//  Map (Canvas 2D)
-// ════════════════════════════════════════════════════
-function drawMap() {
-  const container = document.querySelectorAll('.panel')[1];
-  if (!container) return;
-  const canvas = document.getElementById('map');
-  const w = container.clientWidth - 32;
-  const h = container.clientHeight - 46;
-  if (w < 50 || h < 50) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const s = currentSession;
-  if (!s || !s.events || s.events.length === 0 || !s.events[0].lat) {
-    ctx.fillStyle = C.gridText; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Aucune donnée spatiale', w / 2, h / 2);
-    return;
-  }
-
-  // Bounds
-  let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
-  for (const ev of s.events) {
-    if (!ev.lat || !ev.lon) continue;
-    if (ev.lat < minLat) minLat = ev.lat;
-    if (ev.lat > maxLat) maxLat = ev.lat;
-    if (ev.lon < minLon) minLon = ev.lon;
-    if (ev.lon > maxLon) maxLon = ev.lon;
-  }
-  const padLat = Math.max(0.1, (maxLat - minLat) * 0.15);
-  const padLon = Math.max(0.1, (maxLon - minLon) * 0.15);
-  minLat -= padLat; maxLat += padLat;
-  minLon -= padLon; maxLon += padLon;
-
-  const midLatRad = ((minLat + maxLat) / 2) * Math.PI / 180;
-  const aspect_data = ((maxLon - minLon) * Math.cos(midLatRad)) / (maxLat - minLat);
-  const aspect_canvas = w / h;
-
-  if (aspect_canvas > aspect_data) {
-    const centerLon = (minLon + maxLon) / 2;
-    const newSpan = (maxLat - minLat) * aspect_canvas / Math.cos(midLatRad);
-    minLon = centerLon - newSpan / 2;
-    maxLon = centerLon + newSpan / 2;
-  } else {
-    const centerLat = (minLat + maxLat) / 2;
-    const newSpan = (maxLon - minLon) * Math.cos(midLatRad) / aspect_canvas;
-    minLat = centerLat - newSpan / 2;
-    maxLat = centerLat + newSpan / 2;
-  }
-
-  const projX = lon => ((lon - minLon) / (maxLon - minLon)) * w;
-  const projY = lat => h - ((lat - minLat) / (maxLat - minLat)) * h;
-
-  // Grid
-  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
-  for (let i = 1; i <= 4; i++) {
-    ctx.beginPath(); ctx.moveTo(0, h * i / 5); ctx.lineTo(w, h * i / 5); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(w * i / 5, 0); ctx.lineTo(w * i / 5, h); ctx.stroke();
-  }
-
-  // Airport position (median of events)
-  const sortedLats = s.events.map(e => e.lat).filter(Boolean).sort((a, b) => a - b);
-  const sortedLons = s.events.map(e => e.lon).filter(Boolean).sort((a, b) => a - b);
-  const apLat = sortedLats[Math.floor(sortedLats.length / 2)];
-  const apLon = sortedLons[Math.floor(sortedLons.length / 2)];
-  const ax = projX(apLon), ay = projY(apLat);
-
-  // 5km circle — compute radius in pixels
-  // 1 degree lat ≈ 111 km, so 5km ≈ 5/111 degrees
-  const km5_deg_lat = 5.0 / 111.0;
-  const km5_px = (km5_deg_lat / (maxLat - minLat)) * h;
-
-  // Radar rings (50km reference)
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.beginPath(); ctx.arc(ax, ay, Math.min(w, h) / 4, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(ax, ay, Math.min(w, h) / 2, 0, Math.PI * 2); ctx.stroke();
-
-  // 5km circle (highlighted)
-  ctx.strokeStyle = 'rgba(230,57,70,0.45)';
-  ctx.lineWidth = 1.2;
-  ctx.setLineDash([4, 3]);
-  ctx.beginPath(); ctx.arc(ax, ay, km5_px, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(230,57,70,0.5)'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('5 km', ax, ay - km5_px - 3);
-
-  // Draw events
-  const visibleEvents = s.events.filter(e => e.time <= currentTime);
-  for (const ev of visibleEvents) {
-    if (!ev.lat) continue;
-    const x = projX(ev.lon);
-    const y = projY(ev.lat);
-    let r = 2;
-    if (ev.amplitude) r = Math.min(6, Math.max(2, Math.abs(ev.amplitude) / 15));
-    if (ev.is_cg) r *= 1.5;
-
-    const color = getEventColor(ev.time);
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
-
-    if (currentTime - ev.time < 0.5) {
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
-    }
-  }
-
-  // Airport marker (on top)
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(ax, ay, 5, 0, 2 * Math.PI); ctx.fill();
-  ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('✈', ax, ay + 3);
-}
-
-window.addEventListener('resize', () => { if (currentSession) render(); });
-</script>
+    window.addEventListener('resize', () => { if (currentSession) render(); });
+  </script>
 </body>
+
 </html>
