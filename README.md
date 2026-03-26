@@ -55,4 +55,4 @@ Les rapports sont disponibles au lien suivant : [EDA](https://mstrdav.github.io/
 - **Entraînements complets** :
 Les entraînements des divers modèles Hawkes et spatiaux peuvent être rejoués à travers les scripts situés sous `src/` (ex: `python src/spatial_moe_model.py`).
 - **Démonstration Web** :
-La plateforme de démo interactive, rejouant certaines sessions orageuses et les prédictions associées, est accessible au lien suivant : [https://mstrdav.github.io/prediction-orage/](https://mstrdav.github.io/prediction-orage/).
+La plateforme de démo interactive, rejouant certaines sessions orageuses et les prédictions associées, est accessible au lien suivant : [https://mstrdav.github.io/prediction-orage/interactive/](https://mstrdav.github.io/prediction-orage/interactive/).
