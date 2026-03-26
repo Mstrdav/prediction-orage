@@ -46,16 +46,16 @@ def savefig(name):
     fig_files.append(p)
     print(f"  [OK] {p}")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Chargement des données…")
 df = load_raw()
 alerts = load_alerts(df)
 sessions = get_alert_sessions(df)
 print(f"  {len(df):,} eclairs | {df['airport'].nunique()} aeroports | {len(sessions)} sessions")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 1 – Distribution des éclairs par aéroport (bar + pie)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 1 – Éclairs par aéroport…")
 counts = df.groupby("airport").size().sort_values(ascending=False)
 
@@ -79,9 +79,9 @@ plt.suptitle("Répartition des éclairs par aéroport", fontweight="bold", y=1.0
 plt.tight_layout()
 savefig("fig1_airport_counts")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 2 – Distribution temporelle (mensuelle et horaire)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 2 – Distribution temporelle…")
 df["month"] = df["date"].dt.month
 df["hour"] = df["date"].dt.hour
@@ -111,9 +111,9 @@ plt.suptitle("Saisonnalité et cycle diurne des éclairs", fontweight="bold", y=
 plt.tight_layout()
 savefig("fig2_temporal")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 3 – Heatmap mois × heure
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 3 – Heatmap mois × heure…")
 heat = df.groupby(["month", "hour"]).size().unstack(fill_value=0)
 
@@ -128,9 +128,9 @@ ax.set_ylabel("Mois")
 plt.tight_layout()
 savefig("fig3_heatmap_month_hour")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 4 – Heatmap par aéroport et mois
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 4 – Heatmap aéroport × mois…")
 heat2 = df.groupby(["airport", "month"]).size().unstack(fill_value=0)
 
@@ -145,9 +145,9 @@ ax.set_ylabel("")
 plt.tight_layout()
 savefig("fig4_heatmap_airport_month")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 5 – Caractéristiques physiques des éclairs
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 5 – Caractéristiques physiques…")
 fig, axes = plt.subplots(2, 2, figsize=(12, 8))
 
@@ -189,9 +189,9 @@ plt.suptitle("Caractéristiques physiques des éclairs", fontweight="bold", y=1.
 plt.tight_layout()
 savefig("fig5_physics")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 6 – Rose des azimuts par aéroport
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 6 – Rose des azimuts…")
 airports = df["airport"].unique()
 n = len(airports)
@@ -216,9 +216,9 @@ plt.suptitle("Rose des azimuts des éclairs autour de chaque aéroport", fontwei
 plt.tight_layout()
 savefig("fig6_azimuth_rose")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 7 – Carte de dispersion géographique
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 7 – Carte géographique…")
 airport_coords = {
     "Ajaccio":  (41.9236, 8.8029),
@@ -263,9 +263,9 @@ fig.suptitle("Densité spatiale des éclairs - Fenêtre de 35 km", fontweight="b
 plt.tight_layout()
 savefig("fig7_geo_scatter")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 8 – Analyse des sessions d'alerte
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 8 – Sessions d'alerte…")
 fig, axes = plt.subplots(1, 3, figsize=(14, 4))
 
@@ -300,9 +300,9 @@ plt.suptitle("Analyse des sessions d'alerte orage", fontweight="bold", y=1.01)
 plt.tight_layout()
 savefig("fig8_sessions")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 9 – Durée médiane des sessions par aéroport (Boxplot -> ViolinPlot)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 9 – Durée sessions par aéroport…")
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
@@ -335,9 +335,9 @@ plt.suptitle("Comparaison des sessions d'alerte par aéroport", fontweight="bold
 plt.tight_layout()
 savefig("fig9_sessions_by_airport")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 10 – Analyse de la variable cible
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 10 – Variable cible…")
 cg_only = alerts[~alerts["icloud"]]  # éclairs cloud-to-ground dans sessions
 
@@ -407,9 +407,9 @@ plt.suptitle("Analyse de la variable cible et des dynamiques temporelles", fontw
 plt.tight_layout()
 savefig("fig10_target_analysis")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 11 – Exemple de session d'alerte (timeline)
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 11 – Exemple de session…")
 # Choisir une session de taille représentative AVEC des IC (critères relâchés)
 good_sessions = sessions[(sessions["n_lightnings"] > 50) & (sessions["n_ic"] >= 5) & (sessions["duration_min"] > 30) & (sessions["duration_min"] < 150)]
@@ -446,9 +446,9 @@ if len(good_sessions) > 0:
     plt.tight_layout()
     savefig("fig11_session_example")
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 # FIG 12 – Matrice de corrélation
-# ═══════════════════════════════════════════════════════════════════════════════
+# ----------------------------------------------------═══════════════════════════
 print("Fig 12 – Matrice de corrélation…")
 num_cols = ["amplitude", "maxis", "dist", "azimuth"]
 corr = df[num_cols].corr()

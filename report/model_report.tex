@@ -84,9 +84,9 @@
 \tableofcontents
 \newpage
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \section{Vue d'ensemble et comparaison}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \begin{figure}[H]
   \centering
@@ -120,10 +120,10 @@ Toutes les valeurs sont en minutes.}
   présente une distribution nettement plus resserrée vers zéro que les trois autres.}
 \end{figure}
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Modèle 1 — Baseline (règle fixe 30 minutes)}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \subsection{Fonctionnement}
 La règle métier actuelle consiste à maintenir l'alerte pendant une durée fixe de 30 minutes 
@@ -147,10 +147,10 @@ surestime et maintient l'alerte inutilement.
 \subsection{Pistes d'amélioration}
 Aucune --- c'est la référence. Son rôle est de quantifier le gain apporté par les modèles.
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Modèle 2 — XGBoost Survival (AFT)}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \subsection{Fonctionnement}
 XGBoost est un algorithme d'ensemble par gradient boosting sur des arbres de décision.
@@ -198,10 +198,10 @@ de fenêtre glissante.
   \item Utiliser un split temporel strict (par date) plutôt que par session
 \end{itemize}
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Modèle 3 — Processus de Hawkes (Classique)}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \subsection{Fonctionnement}
 Le processus de Hawkes est un processus ponctuel \textbf{autoexcitant} : 
@@ -253,10 +253,10 @@ si le front approche ou s'éloigne.
   \item Seuil adaptatif par aéroport
 \end{itemize}
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Modèle 4 — Neural Hawkes Process (GRU)}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \subsection{Fonctionnement}
 Le Neural Hawkes Process remplace le noyau exponentiel paramétrique par un 
@@ -303,10 +303,10 @@ car il peut ``mémoriser'' la dynamique entière de la séquence.
   \item Augmenter la taille du dataset avec des données synthétiques
 \end{itemize}
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Modèle 5 — Bayesian Neural Network (MC Dropout)}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \subsection{Fonctionnement}
 Le BNN utilise l'approximation \textbf{Monte Carlo Dropout} : un MLP classique 
@@ -354,10 +354,10 @@ bayésienne véritable, et que le réseau est trop petit et ne traite pas la sé
   \item Tester le Concrete Dropout (dropout rate appris)
 \end{itemize}
 
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 \newpage
 \section{Synthèse et recommandation}
-% ═══════════════════════════════════════════════════════════════════════════════
+% ----------------------------------------------------═══════════════════════════
 
 \begin{keybox}{Classement final}
 \begin{enumerate}
