@@ -1,0 +1,509 @@
+% ═══════════════════════════════════════════════════════════════════════════════
+%  Soutenance — Prédiction de fin d'orage (Météorage / Data Battle IA PAU 2026)
+% ═══════════════════════════════════════════════════════════════════════════════
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% ── Thème & Couleurs ─────────────────────────────────────────────────────────
+\usetheme{metropolis}
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{tikz}
+\usepackage{appendixnumberbeamer}
+\usepackage{caption}
+\captionsetup{font=tiny,labelfont=bf}
+
+% ── Palette Météorage ────────────────────────────────────────────────────────
+\definecolor{meteoBlue}{HTML}{1D3557}
+\definecolor{meteoRed}{HTML}{E63946}
+\definecolor{meteoGray}{HTML}{F1FAEE}
+\definecolor{meteoCyan}{HTML}{457B9D}
+\definecolor{meteoGold}{HTML}{E9C46A}
+\definecolor{meteoGreen}{HTML}{2A9D8F}
+
+\setbeamercolor{palette primary}{bg=meteoBlue,fg=white}
+\setbeamercolor{frametitle}{bg=meteoBlue,fg=white}
+\setbeamercolor{title separator}{fg=meteoRed}
+\setbeamercolor{progress bar}{fg=meteoRed,bg=meteoBlue!20}
+\setbeamercolor{alerted text}{fg=meteoRed}
+\setbeamercolor{block title}{bg=meteoCyan,fg=white}
+\setbeamercolor{block body}{bg=meteoGray}
+
+\setbeamertemplate{navigation symbols}{}
+\metroset{sectionpage=progressbar}
+
+% ── Macros ────────────────────────────────────────────────────────────────────
+\newcommand{\hig}[1]{\textcolor{meteoRed}{\textbf{#1}}}
+\newcommand{\cmark}{\textcolor{meteoGreen}{\checkmark}}
+\newcommand{\xmark}{\textcolor{meteoRed}{\texttimes}}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\title{Prédiction de fin d'orage}
+\subtitle{Data Battle IA PAU 2026 — Météorage}
+\date{Mars 2026}
+\author{Colin Geindre \and Alexandre Hayoun \and Tao Levray}
+\institute{Équipe : \textbf{Les Vieux Briscards}}
+
+% ═════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Page de titre ─────────────────────────────────────────────────────────────
+\maketitle
+
+% ── Plan ──────────────────────────────────────────────────────────────────────
+\begin{frame}{Plan}
+\tableofcontents
+\end{frame}
+
+
+% ╔═══════════════════════════════════════════════════════════════════════════╗
+% ║  PARTIE 1 — CONTEXTE & EDA                                              ║
+% ╚═══════════════════════════════════════════════════════════════════════════╝
+\section{Phase 1 — Exploration des données}
+
+% ── Contexte ──────────────────────────────────────────────────────────────────
+\begin{frame}{Contexte et problématique}
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{Problème métier :}
+\begin{itemize}
+  \item Les alertes orage sont maintenues \hig{30\,min} après le dernier éclair CG
+  \item Approche conservatrice $\Rightarrow$ pertes d'exploitation aéroportuaires
+\end{itemize}
+
+\vspace{0.8em}
+\textbf{Objectif :}
+\begin{itemize}
+  \item Estimer en \textbf{temps réel} le temps résiduel avant la fin de l'orage
+  \item Réduire les faux maintiens d'alerte tout en garantissant la sécurité
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\begin{block}{Dataset}
+\small
+\begin{tabular}{@{}rl@{}}
+Éclairs  & 507\,071 \\
+Aéroports & 5 \\
+Sessions  & 769 \\
+Éclairs / alerte & 56\,599 \\
+\end{tabular}
+\end{block}
+
+\vspace{0.5em}
+\small\textit{5 sites : Ajaccio, Bastia, Biarritz, Nantes, Pise}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Répartition aéroports ────────────────────────────────────────────────────
+\begin{frame}{Répartition par aéroport}
+\begin{columns}[c]
+\begin{column}{0.6\textwidth}
+\includegraphics[width=\linewidth]{figures/fig1_airport_counts.pdf}
+\end{column}
+\begin{column}{0.38\textwidth}
+\begin{itemize}
+  \item \textbf{Pise} domine ($>30\%$)
+  \item Bastia $\approx 2\times$ Ajaccio malgré la proximité géographique
+  \item Nantes : activité la plus faible
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Temporel ──────────────────────────────────────────────────────────────────
+\begin{frame}{Patterns temporels}
+\begin{columns}[c]
+\begin{column}{0.52\textwidth}
+\includegraphics[width=\linewidth]{figures/fig2_temporal.pdf}
+\end{column}
+\begin{column}{0.46\textwidth}
+\includegraphics[width=\linewidth]{figures/fig3_heatmap_month_hour.pdf}
+\end{column}
+\end{columns}
+\vspace{0.3em}
+\centering\small
+\textbf{Saisonnalité estivale} marquée (pic juin--sept.) · \textbf{Cycle diurne} avec maximum 12h--15h UTC
+\end{frame}
+
+
+% ── Aéroport × mois ──────────────────────────────────────────────────────────
+\begin{frame}{Profil saisonnier par aéroport}
+\centering
+\includegraphics[width=0.78\linewidth]{figures/fig4_heatmap_airport_month.pdf}
+
+\vspace{0.3em}
+\small
+Biarritz : pic \textbf{précoce} (mai--août) · Pise : pic \textbf{tardif} (août--sept.) · Corse : pic \textbf{automnal} (août--oct.)
+\end{frame}
+
+
+
+
+% ── Rose des azimuts ──────────────────────────────────────────────────────────
+\begin{frame}{Direction des orages (rose des azimuts)}
+\centering
+\includegraphics[width=0.7\linewidth]{figures/fig6_azimuth_rose.pdf}
+
+\vspace{0.3em}
+\small
+Chaque aéroport a un \textbf{profil directionnel unique} $\Rightarrow$ pertinence d'une composante spatiale
+\end{frame}
+
+
+% ── Géographie ────────────────────────────────────────────────────────────────
+\begin{frame}{Répartition géographique des éclairs}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/fig7_geo_scatter.pdf}
+
+\vspace{0.3em}
+\small
+Clusters liés au relief (Corse, Apennins) — distributions homogènes en plaine (Nantes)
+\end{frame}
+
+
+
+
+% ── Synthèse EDA ─────────────────────────────────────────────────────────────
+\begin{frame}{Synthèse de l'EDA}
+\begin{block}{Enseignements clés}
+\begin{itemize}
+  \item Forte \textbf{saisonnalité} et \textbf{cycle diurne} $\Rightarrow$ features temporelles cycliques
+  \item \textbf{Hétérogénéité} entre aéroports $\Rightarrow$ encodage du site
+  \item \textbf{Déséquilibre de classes} par construction $\Rightarrow$ formulation régression/survie
+  \item \textbf{Structure séquentielle} = information la plus riche $\Rightarrow$ processus ponctuels, RNN
+  \item Signaux de \textbf{dissipation} : ratio IC $\nearrow$, intervalles inter-CG $\nearrow$
+\end{itemize}
+\end{block}
+\end{frame}
+
+
+% ╔═══════════════════════════════════════════════════════════════════════════╗
+% ║  PARTIE 2 — COMPARAISON DE MODÈLES                                      ║
+% ╚═══════════════════════════════════════════════════════════════════════════╝
+\section{Phase 2 — Comparaison de modèles}
+
+
+% ── Vue d'ensemble ────────────────────────────────────────────────────────────
+\begin{frame}{Résultats globaux}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/comparison_global.pdf}
+
+\vspace{0.3em}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Modèle} & \textbf{MAE} & \textbf{RMSE} & \textbf{Méd.} & \textbf{Biais} & \textbf{P90} \\
+\midrule
+Baseline 30 min       & 60.26 & 94.05  & 33.32 & $-$52.32 & 132.48 \\
+XGBoost AFT           & 57.28 & 90.69  & 33.18 & $-$26.74 & 149.82 \\
+Hawkes Classique      & 83.99 & 124.37 & 56.88 & $-$83.82 & 178.96 \\
+\rowcolor{meteoGray}\textbf{Neural Hawkes (GRU)} & \textbf{22.11} & \textbf{32.50} & \textbf{18.00} & \textbf{$-$1.61} & \textbf{40.12} \\
+BNN MC Dropout        & 68.20 & 102.98 & 34.31 & +1.42 & 164.40 \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+
+% ── XGBoost ──────────────────────────────────────────────────────────────────
+\begin{frame}{XGBoost AFT — modèle tabulaire}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\linewidth]{figures/xgboost_importance.pdf}
+\end{column}
+\begin{column}{0.43\textwidth}
+\begin{itemize}
+  \item Modélise $\ln(T)$ via Accelerated Failure Time
+  \item 20 features (temporelles, spatiales, physiques)
+  \item MAE = 57.28 min ($\sim$ baseline)
+  \item \textbf{Limite} : traite chaque éclair \emph{indépendamment}
+  \item \texttt{n\_lightnings\_15m} domine
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Hawkes Classique ──────────────────────────────────────────────────────────
+\begin{frame}{Processus de Hawkes classique}
+\begin{columns}[c]
+\begin{column}{0.55\textwidth}
+\includegraphics[width=\linewidth]{figures/hawkes_intensity.pdf}
+\end{column}
+\begin{column}{0.43\textwidth}
+\textbf{Intensité conditionnelle :}
+$$\lambda(t) = \mu + \sum_{t_i < t} \alpha\beta\,e^{-\beta(t-t_i)}$$
+
+\vspace{0.5em}
+\begin{itemize}
+  \item MAE = 83.99 min (\hig{pire} modèle)
+  \item Noyau exponentiel trop simpliste
+  \item \textbf{Mais} : le cadre théorique est validé par le Neural Hawkes
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Neural Hawkes ─────────────────────────────────────────────────────────────
+\begin{frame}{Neural Hawkes Process (GRU) — \textcolor{meteoGreen}{meilleur modèle}}
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{Principe :}\\
+Remplacer le noyau exponentiel par un \textbf{GRU} qui apprend la dynamique :
+$$\lambda(t) = \text{softplus}\big(W_h \cdot h_t + w_\Delta \cdot \Delta t + b\big)$$
+
+\vspace{0.5em}
+\textbf{Avantages :}
+\begin{itemize}
+  \item Interactions \textbf{non-linéaires} entre features
+  \item Dépendances \textbf{à long terme}
+  \item Capture la physique de chaque éclair
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\begin{block}{Métriques}
+\begin{tabular}{@{}rl@{}}
+MAE     & \hig{22.11 min} \\
+RMSE    & 32.50 min \\
+Médiane & 18.00 min \\
+Biais   & $-$1.61 min \\
+P90     & 40.12 min \\
+\end{tabular}
+\end{block}
+
+\vspace{0.5em}
+\small $3\times$ meilleur que la baseline\\
+Biais \textbf{quasi nul}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Distribution des erreurs ──────────────────────────────────────────────────
+\begin{frame}{Distribution des erreurs}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/error_distributions.pdf}
+
+\vspace{0.3em}
+\small
+Le Neural Hawkes (GRU) a une distribution \textbf{nettement plus resserrée} vers zéro
+\end{frame}
+
+
+
+
+% ── Synthèse Phase 2 ────────────────────────────────────────────────────────
+\begin{frame}{Synthèse Phase 2}
+\begin{block}{Classement final}
+\begin{enumerate}
+  \item \textbf{Neural Hawkes (GRU)} — MAE = 22.11, biais $\approx$ 0 \cmark
+  \item \textbf{XGBoost AFT} — MAE = 57.28, bon modèle tabulaire
+  \item \textbf{Baseline} — MAE = 60.26, référence métier
+  \item \textbf{BNN MC Dropout} — Incertitude utile mais MAE élevée
+  \item \textbf{Hawkes classique} — Trop simpliste mais cadre validé
+\end{enumerate}
+\end{block}
+
+\vspace{0.5em}
+\centering
+$\Rightarrow$ Le \textbf{Neural Hawkes Process} est retenu comme base pour la phase suivante
+\end{frame}
+
+
+% ╔═══════════════════════════════════════════════════════════════════════════╗
+% ║  PARTIE 3 — SPÉCIALISATION & AMÉLIORATIONS                              ║
+% ╚═══════════════════════════════════════════════════════════════════════════╝
+\section{Phase 3 — Spécialisation et améliorations}
+
+
+% ── Roadmap ──────────────────────────────────────────────────────────────────
+\begin{frame}{Axes d'amélioration}
+\begin{enumerate}
+  \item \textbf{Enrichissement des features} : 4 $\to$ 12 features (azimuth, densité, tendance distance, ratio IC\ldots)
+  \item \textbf{Architecture Transformer} avec encodage positionnel continu
+  \item \textbf{Sortie Gaussienne en log-space} : résout le biais de la régression Huber
+  \item \textbf{Estimation d'incertitude} (MC Dropout, variationnel)
+  \item \textbf{Modèles spécialisés} par aéroport
+  \item \textbf{Spatial Mixture of Experts (MoE)} : $N=3$ experts guidés par la cinématique
+\end{enumerate}
+\end{frame}
+
+
+% ── Features enrichies ───────────────────────────────────────────────────────
+\begin{frame}{Enrichissement des features}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{\#} & \textbf{Feature} & \textbf{Description} \\
+\midrule
+0--3  & icloud, amplitude, dist, maxis & Phase 2 (inchangées) \\
+4--5  & azimuth\_sin, azimuth\_cos    & Direction encodée cycliquement \\
+6     & dt\_since\_last               & Temps inter-événement \\
+7     & dt\_since\_last\_cg           & Temps depuis le dernier CG \\
+8     & density\_5min                 & Nb éclairs / 5 min \\
+9     & ic\_ratio\_recent             & Ratio IC récent (10 derniers) \\
+10    & dist\_to\_centroid            & Distance au centroïde mobile \\
+11    & dist\_trend                   & Tendance distance (+ = éloignement) \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.8em}
+\textbf{Motivation :} capturer les signaux de \textbf{dissipation} (éloignement, baisse de densité, ratio IC $\nearrow$)
+\end{frame}
+
+
+% ── Log Gaussian ─────────────────────────────────────────────────────────────
+\begin{frame}{Sortie Gaussienne en espace log — la clé}
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\textbf{Problème :} la distribution du temps restant est très asymétrique $\Rightarrow$ la Huber loss biaise vers les grandes valeurs.
+
+\vspace{0.5em}
+\textbf{Solution :} $z = \log(1+y)$ normalise la distribution.
+
+$$\mathcal{L}_{\text{Gauss}} = \frac{1}{2}\left[\frac{(z-\mu)^2}{\sigma^2} + 2\log\sigma\right]$$
+
+\vspace{0.5em}
+La prédiction finale : $\hat{y} = e^\mu - 1$
+
+L'incertitude est \textbf{naturellement calibrée}.
+\end{column}
+\begin{column}{0.42\textwidth}
+\begin{block}{Impact (la plus grande amélioration)}
+\begin{tabular}{@{}lcc@{}}
+         & \textbf{Avant} & \textbf{Après} \\
+\midrule
+Biais    & +11.04 & \hig{+1.96} \\
+MAE      & 26.59  & \hig{21.33} \\
+Médiane  & 24.18  & \hig{15.96} \\
+\end{tabular}
+
+\vspace{0.5em}
+\small Biais : $-82\%$\\
+MAE : $-20\%$\\
+Médiane : $-34\%$
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+% ── Résultats comparatifs ────────────────────────────────────────────────────
+\begin{frame}{Résultats comparatifs — toutes variantes}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/phase2bis_ablation.pdf}
+
+\vspace{0.3em}
+\small
+\begin{tabular}{llrrrrr}
+\toprule
+\textbf{It.} & \textbf{Variante} & \textbf{MAE} & \textbf{RMSE} & \textbf{Méd.} & \textbf{Biais} & \textbf{P90} \\
+\midrule
+Réf. & Baseline 30 min & 60.26 & --- & --- & $-$52.32 & --- \\
+Réf. & GRU v1 (Phase 2) & 22.11 & 32.50 & 18.00 & $-$1.61 & 40.12 \\
+\rowcolor{meteoGray}\textbf{v3} & \textbf{GRU Gaussian (log)} & \textbf{21.33} & \textbf{30.25} & \textbf{15.96} & \textbf{+1.96} & \textbf{42.13} \\
+v3 & Transformer Gaussian & 23.25 & 31.59 & 19.34 & +4.23 & 43.12 \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+
+
+
+% ── Par aéroport ─────────────────────────────────────────────────────────────
+\begin{frame}{Performance par aéroport}
+\centering
+\includegraphics[width=0.72\linewidth]{figures/phase2bis_per_airport.pdf}
+
+\vspace{0.3em}
+\small
+Homogénéité entre aéroports : écart max de \textbf{2.57 min} sur la MAE.\\
+La spécialisation par aéroport n'améliore que marginalement ($\Delta$ MAE $\approx$ +0.60 min)
+\end{frame}
+
+
+
+
+% ╔═══════════════════════════════════════════════════════════════════════════╗
+% ║  CONCLUSION                                                              ║
+% ╚═══════════════════════════════════════════════════════════════════════════╝
+\section{Conclusion et démonstration}
+
+
+% ── Résultats clés ───────────────────────────────────────────────────────────
+\begin{frame}{Résultats finaux}
+\begin{columns}[T]
+\begin{column}{0.52\textwidth}
+\begin{block}{Modèle final — GRU Gaussian (log)}
+\begin{tabular}{@{}rl@{}}
+MAE          & \hig{21.33 min} (vs 60.26 baseline) \\
+RMSE         & 30.25 min \\
+Médiane      & 15.96 min \\
+Biais        & +1.96 min \\
+Calibration  & 96.4\% dans 2$\sigma$ \\
+\end{tabular}
+\end{block}
+\end{column}
+\begin{column}{0.45\textwidth}
+\begin{block}{Progression}
+\centering
+\begin{tabular}{@{}lc@{}}
+Baseline     & 60.26 min \\
+XGBoost AFT  & 57.28 min \\
+Neural Hawkes v1 & 22.11 min \\
+\textbf{GRU Gaussian} & \textbf{21.33 min} \\
+\end{tabular}
+
+\vspace{0.5em}
+\small Réduction de \hig{$-65\%$} par rapport à la baseline
+\end{block}
+\end{column}
+\end{columns}
+
+\vspace{0.8em}
+\centering
+\textbf{+ Interface web interactive} pour explorer les sessions orageuses et les prédictions\\
+\small\url{https://mstrdav.github.io/prediction-orage/interactive/}
+\end{frame}
+
+
+% ── Perspectives ─────────────────────────────────────────────────────────────
+\begin{frame}{Perspectives}
+\begin{enumerate}
+  \item \textbf{Plus de données} : le dataset (1\,682 sessions) reste limité
+  \item \textbf{Features météo} : données radar (réflectivité, vent)
+  \item \textbf{Recalibration} isotonique pour corriger la sur-couverture
+  \item \textbf{Hybride MoE + GRU} : combiner la puissance séquentielle du GRU avec la spécialisation spatiale du MoE
+  \item \textbf{Déploiement temps réel} : intégration dans les systèmes d'alerte existants
+\end{enumerate}
+\end{frame}
+
+
+% ── Merci ─────────────────────────────────────────────────────────────────────
+\begin{frame}[standout]
+Merci pour votre attention !
+
+\vspace{1em}
+\large Questions ?
+
+\vspace{1.5em}
+\normalsize
+\textbf{Les Vieux Briscards}\\
+\small Colin Geindre · Alexandre Hayoun · Tao Levray
+
+\vspace{1.5em}
+\footnotesize
+\url{https://github.com/Mstrdav/prediction-orage}\\
+\url{https://mstrdav.github.io/prediction-orage/interactive/}
+\end{frame}
+
+\end{document}
